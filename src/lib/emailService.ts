@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resendApiKey = process.env.RESEND_API_KEY || 're_CGFDARGM_J6Bw437rbjjwodh9zf1k9jJo';
+const resendApiKey = process.env.RESEND_API_KEY || 're_QjX6fv1Y_LZzBFmvsvhswfDmVLG5ymuNb';
 const resend = new Resend(resendApiKey);
 
 // Default sender in Resend sandbox. Can be overridden in .env.local with a verified domain (e.g. noreply@yourdomain.com)
