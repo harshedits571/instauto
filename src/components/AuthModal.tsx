@@ -32,20 +32,24 @@ export default function AuthModal({
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const { user, error } = await signInWithGoogle();
-      if (error || !user) {
-        setErrorMsg(error || 'Failed to sign in with Google');
+      const res = await signInWithGoogle();
+      if ((res as any)?.isRedirecting) {
+        // Browser popup was blocked, user is being redirected to Google
+        return;
+      }
+      if (res.error || !res.user) {
+        setErrorMsg(res.error || 'Failed to sign in with Google');
         setIsLoading(false);
         return;
       }
 
       const mappedUser: User = {
-        id: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || 'Creator',
-        email: user.email || '',
+        id: res.user.uid,
+        name: res.user.displayName || res.user.email?.split('@')[0] || 'Creator',
+        email: res.user.email || '',
         role: 'creator',
         plan: 'pro',
-        avatar: user.photoURL || undefined
+        avatar: res.user.photoURL || undefined
       };
 
       saveStoredUser(mappedUser);
@@ -56,6 +60,12 @@ export default function AuthModal({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRedirectSignIn = async () => {
+    setIsLoading(true);
+    const { signInWithGoogleRedirect } = await import('@/lib/firebase');
+    await signInWithGoogleRedirect();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -89,8 +99,23 @@ export default function AuthModal({
 
         <div className="modal-body" style={{ gap: '16px' }}>
           {errorMsg && (
-            <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '12px' }}>
-              {errorMsg}
+            <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '12px' }}>
+              <div>{errorMsg}</div>
+              {errorMsg.includes('popup-blocked') && (
+                <div style={{ marginTop: '10px' }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#7f1d1d' }}>
+                    Your browser blocked the sign-in pop-up window. You can click below to sign in directly without pop-ups:
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={handleRedirectSignIn}
+                    style={{ width: '100%', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
+                  >
+                    <span>Sign In with Google (Direct Redirect)</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

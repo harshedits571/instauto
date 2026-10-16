@@ -3,6 +3,8 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   onAuthStateChanged as onFirebaseAuthStateChanged,
   User as FirebaseUser
@@ -36,7 +38,36 @@ export async function signInWithGoogle() {
     return { user: result.user, error: null };
   } catch (error: any) {
     console.error('[Firebase Client] Google Sign-in Error:', error);
+    // If popup is blocked by browser, automatically fall back to redirect mode
+    if (error?.code === 'auth/popup-blocked') {
+      try {
+        console.warn('[Firebase Client] Popup blocked. Redirecting to Google login...');
+        await signInWithRedirect(auth, googleProvider);
+        return { user: null, error: null, isRedirecting: true };
+      } catch (redirectErr: any) {
+        return { user: null, error: redirectErr.message || 'Redirect failed' };
+      }
+    }
     return { user: null, error: error.message || 'Failed to sign in with Google' };
+  }
+}
+
+export async function signInWithGoogleRedirect() {
+  try {
+    await signInWithRedirect(auth, googleProvider);
+    return { isRedirecting: true, error: null };
+  } catch (error: any) {
+    return { isRedirecting: false, error: error.message };
+  }
+}
+
+export async function getRedirectAuthResult() {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (err: any) {
+    console.warn('[Firebase Client] getRedirectResult:', err);
+    return null;
   }
 }
 
