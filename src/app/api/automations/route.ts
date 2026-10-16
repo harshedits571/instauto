@@ -5,12 +5,26 @@ import { getServerAutomations, saveServerAutomations } from '@/lib/serverStore';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const userId = request.nextUrl.searchParams.get('userId') || 'default_creator';
+  const userId = request.nextUrl.searchParams.get('userId');
   
+  // If no user is logged in, return empty array to protect privacy
+  if (!userId || userId === 'usr_default') {
+    return NextResponse.json({
+      success: true,
+      data: [],
+      status: 'unauthenticated',
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // Try Firestore first
   let automations = await getUserAutomations(userId);
   if (!automations || automations.length === 0) {
-    automations = getServerAutomations();
+    if (userId === 'default_creator') {
+      automations = getServerAutomations();
+    } else {
+      automations = [];
+    }
   }
 
   return NextResponse.json({

@@ -44,24 +44,26 @@ export default function AutomationsPage() {
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const u = getStoredUser();
+    setUser(u);
     setAccount(getStoredAccount());
     const local = getStoredAutomations();
     setAutomations(local);
 
-    // Fetch server automations
-    fetch('/api/automations')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          setAutomations(data.data);
-          saveStoredAutomations(data.data);
-        } else if (local.length > 0) {
-          // If server was empty, push local to server
-          saveStoredAutomations(local);
-        }
-      })
-      .catch(err => console.warn('Could not sync automations from server:', err));
+    // Only fetch from server if a real user is logged in
+    if (u && u.id && u.id !== 'usr_default') {
+      fetch(`/api/automations?userId=${encodeURIComponent(u.id)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            setAutomations(data.data);
+            saveStoredAutomations(data.data);
+          } else if (local.length > 0) {
+            saveStoredAutomations(local);
+          }
+        })
+        .catch(err => console.warn('Could not sync automations from server:', err));
+    }
   }, []);
 
   const handleToggle = (id: string) => {

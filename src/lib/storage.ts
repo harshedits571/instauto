@@ -2,10 +2,10 @@
 
 import { AutomationRule, CommentLog, InstagramAccount, User, SafetyMetrics } from '@/types';
 
-// Default initial user (clean, unconfigured)
+// Default initial user (clean, unauthenticated visitor)
 export const DEFAULT_USER: User = {
-  id: 'usr_default',
-  name: 'My Workspace',
+  id: '',
+  name: 'Sign In',
   email: '',
   avatar: '',
   role: 'creator',
@@ -43,13 +43,13 @@ export const INITIAL_SAFETY_METRICS: SafetyMetrics = {
   duplicateSuppressionRate: 100
 };
 
-// Local storage key names (v2 to flush old dummy data automatically)
+// Local storage key names (v3 to isolate multi-tenant user accounts cleanly)
 const STORAGE_KEYS = {
-  USER: 'insta_auto_user_v2',
-  ACCOUNT: 'insta_auto_account_v2',
-  AUTOMATIONS: 'insta_auto_rules_v2',
-  LOGS: 'insta_auto_logs_v2',
-  ACCESS_TOKEN: 'insta_auto_meta_token_v2'
+  USER: 'insta_auto_user_v3',
+  ACCOUNT: 'insta_auto_account_v3',
+  AUTOMATIONS: 'insta_auto_rules_v3',
+  LOGS: 'insta_auto_logs_v3',
+  ACCESS_TOKEN: 'insta_auto_meta_token_v3'
 };
 
 export function getStoredUser(): User {

@@ -309,30 +309,58 @@ export default function ConnectInstagramPage() {
                       Authorize with Facebook &amp; Instagram in 1 click. No passwords required. Zero risk of account bans.
                     </p>
                     
-                    <a
-                      href={`/api/auth/instagram?userId=${encodeURIComponent(user.id)}`}
-                      className="btn btn-primary"
-                      style={{ 
-                        width: '100%', 
-                        maxWidth: '380px', 
-                        margin: '0 auto', 
-                        background: 'var(--ig-gradient)', 
-                        borderColor: 'transparent', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '10px', 
-                        padding: '14px 24px', 
-                        fontSize: '15px', 
-                        fontWeight: 700, 
-                        borderRadius: '10px', 
-                        textDecoration: 'none',
-                        boxShadow: '0 4px 14px rgba(225, 48, 108, 0.25)'
-                      }}
-                    >
-                      <Instagram size={20} />
-                      <span>1-Click Connect with Instagram</span>
-                    </a>
+                    {!user.id ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="btn btn-primary"
+                        style={{ 
+                          width: '100%', 
+                          maxWidth: '380px', 
+                          margin: '0 auto', 
+                          background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', 
+                          borderColor: 'transparent', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: '10px', 
+                          padding: '14px 24px', 
+                          fontSize: '15px', 
+                          fontWeight: 700, 
+                          borderRadius: '10px', 
+                          boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Lock size={18} />
+                        <span>Sign In with Google to Connect</span>
+                      </button>
+                    ) : (
+                      <a
+                        href={`/api/auth/instagram?userId=${encodeURIComponent(user.id)}`}
+                        className="btn btn-primary"
+                        style={{ 
+                          width: '100%', 
+                          maxWidth: '380px', 
+                          margin: '0 auto', 
+                          background: 'var(--ig-gradient)', 
+                          borderColor: 'transparent', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: '10px', 
+                          padding: '14px 24px', 
+                          fontSize: '15px', 
+                          fontWeight: 700, 
+                          borderRadius: '10px', 
+                          textDecoration: 'none',
+                          boxShadow: '0 4px 14px rgba(225, 48, 108, 0.25)'
+                        }}
+                      >
+                        <Instagram size={20} />
+                        <span>1-Click Connect with Instagram</span>
+                      </a>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '16px', fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>
                       <ShieldCheck size={16} />

@@ -10,7 +10,22 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userId = request.nextUrl.searchParams.get('userId');
+
+  // Do not expose any account data to unauthenticated requests
+  if (!userId || userId === 'usr_default') {
+    return NextResponse.json({
+      connected: false,
+      account: null,
+      hasToken: false,
+      automationsCount: 0,
+      automations: [],
+      logsCount: 0,
+      recentLogs: []
+    });
+  }
+
   const account = getServerAccount();
   const token = getServerToken();
   const automations = getServerAutomations();

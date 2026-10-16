@@ -53,10 +53,33 @@ export default function DashboardPage() {
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const u = getStoredUser();
+    setUser(u);
     setAccount(getStoredAccount());
     setAutomations(getStoredAutomations());
     setLogs(getStoredLogs());
+
+    if (u && u.id && u.id !== 'usr_default') {
+      fetch(`/api/user/account?userId=${encodeURIComponent(u.id)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.connected && d.account) {
+            setAccount(d.account);
+            saveStoredAccount(d.account);
+          }
+        })
+        .catch(() => {});
+
+      fetch(`/api/automations?userId=${encodeURIComponent(u.id)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && Array.isArray(d.data)) {
+            setAutomations(d.data);
+            saveStoredAutomations(d.data);
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const handleToggleAutomation = (id: string) => {
@@ -118,6 +141,58 @@ export default function DashboardPage() {
         />
 
         <main className="content-wrapper">
+          {/* Guest Sign-In Hero for new unauthenticated visitors */}
+          {(!user.id || user.id === 'usr_default') && (
+            <div style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+              borderRadius: '16px',
+              padding: '24px 28px',
+              color: 'white',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.3)',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div style={{ maxWidth: '640px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, marginBottom: '10px' }}>
+                  <Sparkles size={14} color="#fde047" />
+                  <span>InstaAuto Creator Cloud</span>
+                </div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '6px', color: 'white' }}>
+                  Automate Reel Comments into Direct Messages Safely
+                </h3>
+                <p style={{ fontSize: '13px', color: '#c7d2fe', lineHeight: 1.5, margin: 0 }}>
+                  Sign in with Google to create your private workspace, connect your Instagram Creator profile via official Meta OAuth, and start turning viewers into leads.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                style={{
+                  background: '#ffffff',
+                  color: '#312e81',
+                  border: 'none',
+                  padding: '12px 22px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>Sign In with Google</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Official Meta Safety Guarantee Notice */}
           <SafetyBadge />
 

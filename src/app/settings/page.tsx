@@ -12,7 +12,8 @@ import {
   Instagram,
   User as UserIcon,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
@@ -129,10 +130,30 @@ export default function SettingsPage() {
 
                   <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#475569', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <strong>Account ID:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{user.id}</span>
+                      <strong>Account ID:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{user.id || 'Not signed in'}</span>
                     </div>
-                    <span className="pill pill-subtle" style={{ fontSize: '10px' }}>Free Pro Tier</span>
+                    <span className="pill pill-subtle" style={{ fontSize: '10px' }}>{user.id ? 'Free Pro Tier' : 'Guest'}</span>
                   </div>
+
+                  {user.id && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: '#ef4444', borderColor: '#fecaca', marginTop: '14px', width: 'fit-content' }}
+                      onClick={async () => {
+                        if (confirm('Log out from this workspace?')) {
+                          const { logOut } = await import('@/lib/firebase');
+                          const { clearAllStoredData } = await import('@/lib/storage');
+                          await logOut();
+                          clearAllStoredData();
+                          window.location.href = '/';
+                        }
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Log Out of Account</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Connected Instagram Account Status Card */}
