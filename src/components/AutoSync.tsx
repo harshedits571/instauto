@@ -7,7 +7,22 @@ import { User } from '@/types';
 
 export default function AutoSync() {
   useEffect(() => {
-    // Check if returning from Google Redirect Auth
+    // 1. Block external Chrome extensions (e.g. Urban VPN, adblockers) from popping up Next.js dev error overlays
+    const handleExtensionError = (event: ErrorEvent) => {
+      const isExtension = 
+        event.filename?.startsWith('chrome-extension://') ||
+        event.filename?.startsWith('moz-extension://') ||
+        event.message?.includes('M_ID') ||
+        event.message?.includes('bis_skin_checked');
+
+      if (isExtension) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('error', handleExtensionError, true);
+
+    // 2. Check if returning from Google Redirect Auth
     getRedirectAuthResult().then((firebaseUser) => {
       if (firebaseUser) {
         const mappedUser: User = {
