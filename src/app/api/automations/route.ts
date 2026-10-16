@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserAutomations, saveAutomation } from '@/lib/dbService';
 import { getServerAutomations, saveServerAutomations } from '@/lib/serverStore';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('userId') || 'default_creator';
   

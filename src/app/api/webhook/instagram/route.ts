@@ -30,6 +30,8 @@ const VALID_TOKENS = [
  * Meta Webhook Challenge Verification
  * When you enter this URL in developers.facebook.com, Meta calls this endpoint with hub.challenge
  */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const mode = searchParams.get('hub.mode');

@@ -8,6 +8,8 @@ import {
   getServerLogs 
 } from '@/lib/serverStore';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const account = getServerAccount();
   const token = getServerToken();

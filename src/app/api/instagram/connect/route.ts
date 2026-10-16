@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { saveServerAccount } from '@/lib/serverStore';
 import { InstagramAccount } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 interface MetaAccountNode {
   id: string;
   name: string;
