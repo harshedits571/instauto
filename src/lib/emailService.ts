@@ -1,10 +1,5 @@
+import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
-
-const resendApiKey = process.env.RESEND_API_KEY || 're_QjX6fv1Y_LZzBFmvsvhswfDmVLG5ymuNb';
-const resend = new Resend(resendApiKey);
-
-// Default sender in Resend sandbox. Can be overridden in .env.local with a verified domain (e.g. noreply@yourdomain.com)
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'InstaAuto <onboarding@resend.dev>';
 
 interface SendAuthEmailOptions {
   to: string;
@@ -27,17 +22,16 @@ export async function sendCustomAuthEmail({
       ? 'Verify your email for InstaAuto' 
       : 'Reset your InstaAuto password';
 
-    const headline = isVerification 
-      ? 'Verify your email address' 
-      : 'Reset your password';
-
     const introText = isVerification
-      ? 'Welcome to InstaAuto! Automate your Instagram comments and DMs safely with official Meta API compliance. Click the button below to verify your email and activate your account:'
-      : 'We received a request to reset your password for your InstaAuto account. Click the button below to choose a new password:';
+      ? 'Welcome to InstaAuto! Automate your Instagram comments and direct messages safely with official Meta API compliance. Click the button below to verify your email and activate your account:'
+      : 'We received a request to reset the password for your InstaAuto account. Click the button below to securely choose a new password:';
 
     const buttonText = isVerification 
       ? 'Verify Email Address' 
       : 'Reset Password';
+
+    // Anti-spam requirement: Always provide a full plain-text version (multipart/alternative)
+    const textContent = `${subject}\n\nHello ${name},\n\n${introText}\n\n${buttonText}: ${actionUrl}\n\nIf you did not request this, please ignore this email.\n\n© ${new Date().getFullYear()} InstaAuto Platform - Official Meta Graph API Partner`;
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -97,7 +91,7 @@ export async function sendCustomAuthEmail({
               <!-- Fallback Direct URL -->
               <div style="margin-top: 28px; padding: 14px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
-                  Or click this direct link:
+                  Or copy and open this link:
                 </p>
                 <a href="${actionUrl}" target="_blank" style="font-size: 12px; color: #4f46e5; text-decoration: underline; word-break: break-all; line-height: 1.4;">
                   ${actionUrl}
@@ -106,7 +100,7 @@ export async function sendCustomAuthEmail({
 
               <!-- Security Notice -->
               <p style="margin: 24px 0 0 0; font-size: 12px; line-height: 1.5; color: #94a3b8;">
-                If you did not request this email, please ignore it or contact our team. Your account remains completely secure.
+                If you did not request this email, you can safely ignore it. Your account remains secure.
               </p>
             </td>
           </tr>
@@ -128,22 +122,71 @@ export async function sendCustomAuthEmail({
 </html>
     `;
 
-    console.log(`[Resend] Sending ${type} email to ${to} via Resend...`);
+    // 1. Check for SMTP credentials (Gmail, Outlook, or custom SMTP)
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, ''); // strip spaces often copied from Google App Passwords
 
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [to],
-      subject: subject,
-      html: htmlContent
-    });
+    if (smtpUser && smtpPass) {
+      console.log(`[SMTP] Sending ${type} email to ${to} via SMTP (${smtpUser})...`);
 
-    if (result.error) {
-      console.error('[Resend Error]:', result.error);
-      return { success: false, error: result.error.message };
+      const transporter = nodemailer.createTransport({
+        service: process.env.SMTP_SERVICE || 'gmail',
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '465', 10),
+        secure: (process.env.SMTP_SECURE ?? 'true') === 'true',
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        }
+      });
+
+      const fromHeader = process.env.SMTP_FROM || `"InstaAuto" <${smtpUser}>`;
+
+      const info = await transporter.sendMail({
+        from: fromHeader,
+        to: to,
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
+        headers: {
+          'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          'X-Priority': '1 (Highest)',
+          'Importance': 'High'
+        }
+      });
+
+      console.log(`[SMTP Success] Email delivered! Message ID: ${info.messageId}`);
+      return { success: true };
     }
 
-    console.log('[Resend Success]: Email sent with ID:', result.data?.id);
-    return { success: true };
+    // 2. Fallback to Resend if configured
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      console.log(`[Resend] Sending ${type} email to ${to} via Resend...`);
+      const resend = new Resend(resendApiKey);
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'InstaAuto <onboarding@resend.dev>';
+
+      const result = await resend.emails.send({
+        from: fromEmail,
+        to: [to],
+        subject: subject,
+        text: textContent,
+        html: htmlContent
+      });
+
+      if (result.error) {
+        console.error('[Resend Error]:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      console.log('[Resend Success]: Email sent with ID:', result.data?.id);
+      return { success: true };
+    }
+
+    return { 
+      success: false, 
+      error: 'No email service configured. Please set SMTP_USER and SMTP_PASS in .env.local.' 
+    };
   } catch (err: any) {
     console.error('[Email Service Exception]:', err);
     return { success: false, error: err.message || 'Failed to send email' };

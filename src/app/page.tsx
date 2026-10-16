@@ -211,7 +211,7 @@ export default function DashboardPage() {
                   Automate Reel Comments into Direct Messages Safely
                 </h3>
                 <p style={{ fontSize: '13px', color: '#c7d2fe', lineHeight: 1.5, margin: 0 }}>
-                  Sign in with Google to create your private workspace, connect your Instagram Creator profile via official Meta OAuth, and start turning viewers into leads.
+                  Create your account or sign in to manage your workspace, connect your Instagram Creator profile via official Meta OAuth, and start turning viewers into leads.
                 </p>
               </div>
               <button
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                <span>Sign In with Google</span>
+                <span>Sign In to Account</span>
                 <ArrowRight size={16} />
               </button>
             </div>

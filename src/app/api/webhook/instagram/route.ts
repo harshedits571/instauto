@@ -33,22 +33,27 @@ const VALID_TOKENS = [
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const mode = searchParams.get('hub.mode');
-  const token = searchParams.get('hub.verify_token');
-  const challenge = searchParams.get('hub.challenge');
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const mode = searchParams.get('hub.mode');
+    const token = searchParams.get('hub.verify_token');
+    const challenge = searchParams.get('hub.challenge');
 
-  console.log('[Meta Webhook] Challenge Verification Request:', { mode, token, challenge });
+    console.log('[Meta Webhook] Challenge Verification Request:', { mode, token, challenge });
 
-  if (mode === 'subscribe' && token && VALID_TOKENS.includes(token)) {
-    console.log('[Meta Webhook] Successfully verified with Meta!');
-    return new NextResponse(challenge, {
-      status: 200,
-      headers: { 'Content-Type': 'text/plain' }
-    });
+    if (mode === 'subscribe' && token && VALID_TOKENS.includes(token)) {
+      console.log('[Meta Webhook] Successfully verified with Meta!');
+      return new NextResponse(challenge || 'ok', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+
+    return NextResponse.json({ error: 'Verification token mismatch' }, { status: 403 });
+  } catch (err: any) {
+    console.error('[Meta Webhook] GET Error:', err);
+    return NextResponse.json({ error: err?.message || 'Verification failed' }, { status: 500 });
   }
-
-  return NextResponse.json({ error: 'Verification token mismatch' }, { status: 403 });
 }
 
 async function handleFollowerCheckAndDelivery({

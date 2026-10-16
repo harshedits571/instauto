@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     }
 
-    // 3. Dispatch the email using Resend
+    // 3. Dispatch the email using custom SMTP / Resend
     const sendResult = await sendCustomAuthEmail({
       to: cleanEmail,
       type: type,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!sendResult.success) {
-      console.warn('[Custom Email API] Resend send warning:', sendResult.error);
+      console.warn('[Custom Email API] Send warning:', sendResult.error);
       return NextResponse.json({ 
         success: false, 
         error: sendResult.error,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${type === 'verification' ? 'Verification' : 'Password reset'} email sent successfully via Resend`,
+      message: `${type === 'verification' ? 'Verification' : 'Password reset'} email sent successfully`,
       actionUrl: actionUrl
     });
   } catch (error: any) {

@@ -269,8 +269,8 @@ export default function ConnectInstagramPage() {
                     </h4>
                     <p style={{ fontSize: '13px', color: isLoggedIn ? '#15803d' : '#64748b', marginTop: '2px' }}>
                       {isLoggedIn 
-                        ? `Logged in as ${user.name} (${user.email || 'Google Account'})` 
-                        : 'Sign in with Google to create your private, isolated creator dashboard.'}
+                        ? `Logged in as ${user.name} (${user.email || 'Workspace Account'})` 
+                        : 'Sign in to your account to create your private, isolated creator dashboard.'}
                     </p>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ export default function ConnectInstagramPage() {
                     onClick={() => setIsAuthModalOpen(true)}
                     style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '8px 18px', fontWeight: 700 }}
                   >
-                    <span>Sign In with Google</span>
+                    <span>Sign In to Account</span>
                     <ArrowRight size={14} />
                   </button>
                 )}
