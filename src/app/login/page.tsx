@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, Lock, Instagram, ArrowRight, RefreshCw, ArrowLeft } from 'lucide-react';
 import { User } from '@/types';
-import { auth } from '@/lib/firebase';
+import { auth, getRedirectAuthResult, signInWithGoogleRedirect } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithCredential, signInWithPopup } from 'firebase/auth';
 import { saveStoredUser } from '@/lib/storage';
 
@@ -18,109 +18,33 @@ function LoginContent() {
   const [nameInput, setNameInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isGsiLoaded, setIsGsiLoaded] = useState(false);
+  const [isPopupBlocked, setIsPopupBlocked] = useState(false);
 
-  // Initialize Google Identity Services (GIS)
+  // Check for redirect auth result on mount
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '167054234575-o34b9rjqb1rct576i4m6ak2t9b3m9ovn.apps.googleusercontent.com';
-
-    const handleCredentialResponse = async (response: any) => {
-      try {
-        setIsLoading(true);
-        setErrorMsg('');
-        const idToken = response.credential;
-        
-        // Decode Google JWT payload
-        const base64Url = idToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split('')
-            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        const payload = JSON.parse(jsonPayload);
-
+    getRedirectAuthResult().then((user) => {
+      if (user) {
         const mappedUser: User = {
-          id: payload.sub || `usr_${Date.now()}`,
-          name: payload.name || payload.email?.split('@')[0] || 'Creator',
-          email: payload.email || '',
+          id: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'Creator',
+          email: user.email || '',
           role: 'creator',
           plan: 'pro',
-          avatar: payload.picture || undefined
+          avatar: user.photoURL || undefined
         };
-
-        // 1. Save user to storage immediately
         saveStoredUser(mappedUser);
-
-        // 2. Non-blocking Firebase authentication in background
-        try {
-          const credential = GoogleAuthProvider.credential(idToken);
-          signInWithCredential(auth, credential).catch((e) => {
-            console.debug('[Firebase Sync]:', e.message);
-          });
-        } catch (e) {}
-
-        // 3. Hard redirect to dashboard so state initializes cleanly
         window.location.href = redirectTo;
-      } catch (err: any) {
-        console.error('Google token decode error:', err);
-        setErrorMsg('Failed to process Google sign-in. Please try again.');
-        setIsLoading(false);
       }
-    };
+    }).catch((err) => {
+      console.debug('[Redirect Auth Error]:', err);
+    });
+  }, [redirectTo]);
 
-    const scriptId = 'google-gsi-client';
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-
-    const setupGsi = () => {
-      if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
-        try {
-          (window as any).google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleCredentialResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true
-          });
-
-          const btnContainer = document.getElementById('google-btn-container');
-          if (btnContainer) {
-            btnContainer.innerHTML = '';
-            (window as any).google.accounts.id.renderButton(btnContainer, {
-              theme: 'outline',
-              size: 'large',
-              type: 'standard',
-              shape: 'rectangular',
-              text: 'continue_with',
-              logo_alignment: 'left',
-              width: 360
-            });
-          }
-
-          setIsGsiLoaded(true);
-        } catch (e) {
-          console.debug('[GIS Setup]:', e);
-        }
-      }
-    };
-
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = setupGsi;
-      document.body.appendChild(script);
-    } else {
-      setupGsi();
-    }
-  }, [redirectTo, router]);
-
-  // Fallback direct Firebase popup
-  const handlePopupFallback = async () => {
+  // Direct, reliable Firebase Google Sign-in
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMsg('');
+    setIsPopupBlocked(false);
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -139,12 +63,29 @@ function LoginContent() {
         window.location.href = redirectTo;
       }
     } catch (err: any) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+      console.error('[Google Sign In Error]:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        // User closed the popup, no error needed
+      } else if (err.code === 'auth/popup-blocked') {
+        setIsPopupBlocked(true);
+        setErrorMsg('Pop-up was blocked by your browser. You can click below to sign in directly without a pop-up.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        setErrorMsg(`Domain unauthorized: "${host}" is not added to Firebase Console > Authentication > Settings > Authorized domains.`);
+      } else {
         setErrorMsg(err.message || 'Pop-up could not complete. You can sign in using your email below.');
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRedirectSignIn = () => {
+    setIsLoading(true);
+    signInWithGoogleRedirect().catch((err) => {
+      setIsLoading(false);
+      setErrorMsg(err.message || 'Redirect failed');
+    });
   };
 
   // Direct fast Email/Creator login (100% reliable)
@@ -206,7 +147,9 @@ function LoginContent() {
       </div>
 
       {/* Main Card */}
-      <div style={{
+      <div 
+        suppressHydrationWarning
+        style={{
         width: '100%',
         maxWidth: '420px',
         backgroundColor: '#ffffff',
@@ -267,7 +210,7 @@ function LoginContent() {
           </div>
         )}
 
-        {/* Google Identity Services Button Container */}
+        {/* Google Sign-in Button */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -275,45 +218,63 @@ function LoginContent() {
           gap: '10px',
           marginBottom: '20px'
         }}>
-          <div 
-            id="google-btn-container" 
-            style={{ 
-              minHeight: '44px',
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '14px',
+              fontWeight: 600,
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              width: '100%'
+              gap: '10px',
+              backgroundColor: '#ffffff',
+              color: '#1f2937',
+              border: '1.5px solid #cbd5e1',
+              borderRadius: '8px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.15s ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}
-          />
-
-          {!isGsiLoaded && (
-            <button
-              type="button"
-              onClick={handlePopupFallback}
-              disabled={isLoading}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                fontSize: '14px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                backgroundColor: '#ffffff',
-                color: '#1f2937',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'background-color 0.15s ease'
-              }}
-            >
+          >
+            {isLoading ? (
+              <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
-              <span>Continue with Google</span>
+            )}
+            <span>{isLoading ? 'Signing in with Google...' : 'Continue with Google'}</span>
+          </button>
+
+          {isPopupBlocked && (
+            <button
+              type="button"
+              onClick={handleRedirectSignIn}
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Sign In in current tab (No pop-up required)
             </button>
           )}
         </div>
@@ -334,8 +295,8 @@ function LoginContent() {
         </div>
 
         {/* Email Entry Form */}
-        <form onSubmit={handleDirectEmailLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
+        <form onSubmit={handleDirectEmailLogin} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div suppressHydrationWarning>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
               Email address
             </label>
@@ -345,6 +306,7 @@ function LoginContent() {
               onChange={(e) => setEmailInput(e.target.value)}
               placeholder="you@example.com"
               required
+              suppressHydrationWarning
               style={{
                 width: '100%',
                 padding: '10px 14px',
@@ -358,7 +320,7 @@ function LoginContent() {
             />
           </div>
 
-          <div>
+          <div suppressHydrationWarning>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
               Your Name (Optional)
             </label>
@@ -367,6 +329,7 @@ function LoginContent() {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               placeholder="Harsh Edits"
+              suppressHydrationWarning
               style={{
                 width: '100%',
                 padding: '10px 14px',
