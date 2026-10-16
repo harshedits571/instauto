@@ -1,0 +1,150 @@
+{
+  "account": {
+    "id": "17841450829637881",
+    "username": "the.editor_harsh",
+    "name": "Harsh_Edits",
+    "profilePicture": "https://scontent.fhbx2-1.fna.fbcdn.net/v/t51.82787-15/756800967_18075729431694322_6295034427264986839_n.jpg?_nc_cat=103&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=7d201b&_nc_ohc=5g60khw2V9wQ7kNvwHCktdM&_nc_oc=AdqLSaU85-uA_QZcvf7FD6eRlS8toKtgr_T-e_3_Y0MSqNmy0w330TnmXRrt_bH18eUDpKRfuDlz2_oyQIVWgtbT&_nc_zt=23&_nc_ht=scontent.fhbx2-1.fna&edm=AJdBtusEAAAA&_nc_gid=BMa4gsfhbsRyVyRxU38MGQ&oh=00_AQPH0nXw9md_KeKJ7QjeVVNLjk14OCjXOvPBxzojc3z_2Q&oe=6AD7B4F4",
+    "followersCount": 2312,
+    "facebookPageId": "1346133935253380",
+    "facebookPageName": "The Editor Harsh",
+    "pageAccessToken": "EABBYpWO71g0BSvEWwe0DPR9Ulu81ZCpjJXN0aASHlVc6jFBvHikO6EoIKQ37KXwM4ycvqHADpuUM524ZBUrIH6sqkYUAbTw5TkneurqWgjPU5dqggKv3f43UeiW7Xihu6UEZBwg4ZCENbAsMrT4JnIfRypPbqMYWRtCYBf4iuEiaU3cvaZA4jLY90z5WI6v0mEcNU35XTx3ZBuWxWqgJFwaIyltZBhmhbZBclGerSiWqCfwZD",
+    "isConnected": true,
+    "accessTokenExpiresAt": "2026-12-15T07:14:09.580Z",
+    "tokenType": "official_graph_api",
+    "status": "active"
+  },
+  "accessToken": "EABBYpWO71g0BSvEWwe0DPR9Ulu81ZCpjJXN0aASHlVc6jFBvHikO6EoIKQ37KXwM4ycvqHADpuUM524ZBUrIH6sqkYUAbTw5TkneurqWgjPU5dqggKv3f43UeiW7Xihu6UEZBwg4ZCENbAsMrT4JnIfRypPbqMYWRtCYBf4iuEiaU3cvaZA4jLY90z5WI6v0mEcNU35XTx3ZBuWxWqgJFwaIyltZBhmhbZBclGerSiWqCfwZD",
+  "automations": [
+    {
+      "dmMessage": "Hey @{{username}}! Thanks for your comment. Here is the link you requested:",
+      "keywords": [
+        "LINK",
+        "link",
+        "Link",
+        "SEND",
+        "send",
+        "INFO",
+        "info"
+      ],
+      "visitProfileButtonText": "Visit Profile",
+      "followButtonText": "Send me the access",
+      "notFollowingMessage": "Oops! Looks like you haven't followed me yet 👀\n\nIt would mean a lot if you could visit my profile and hit that follow button 😁.",
+      "reelId": "",
+      "accessButtonText": "Send me the access",
+      "safetySettings": {
+        "dmsSentToday": 0,
+        "dailyDmCap": 300,
+        "antiBanMode": true,
+        "sendOnlyOncePerUser": true,
+        "randomDelaySeconds": [
+          2,
+          6
+        ]
+      },
+      "reelUrl": "",
+      "stats": {
+        "deliveryRate": 100,
+        "linkClicks": 0,
+        "dmsDelivered": 2,
+        "commentsDetected": 3
+      },
+      "reelThumbnail": "",
+      "requireFollow": true,
+      "linkUrl": "https://www.instagram.com/",
+      "id": "auto_1792108185067",
+      "reelTitle": "All Reels & Videos (Account-Wide)",
+      "confirmFollowButtonText": "I'm following ✅",
+      "commentVariations": [
+        "Sent to your DMs @{{username}}! Check your inbox 🚀",
+        "Just sent you the link in your DMs @{{username}}! ⚡"
+      ],
+      "welcomeMessage": "Hey! I'm so glad you're here - thanks a ton for stopping by 😊\n\nTap below and I'll send you the access in just a moment ✨",
+      "targetType": "all_reels",
+      "userId": "default_creator",
+      "autoReplyComment": true,
+      "linkButtonText": "Get Access 🔗",
+      "name": "All Reels Link Automation",
+      "followPromptMessage": "Hey! I'm so glad you're here - thanks a ton for stopping by 😊\n\nTap below and I'll send you the access in just a moment ✨",
+      "unlockedMessage": "🎉 Awesome, thanks for following! Here is your exclusive link:",
+      "triggerType": "contains",
+      "status": "active",
+      "updatedAt": "2026-10-16T12:49:34.969Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "log_1792136928533_kpqhg",
+      "automationId": "auto_1792108185067",
+      "automationName": "All Reels Link Automation",
+      "commenterUsername": "creativeedits.mov",
+      "commenterId": "18500307550097123",
+      "commentText": "LINK",
+      "mediaId": "18088533106767504",
+      "matchedKeyword": "LINK",
+      "status": "failed",
+      "publicReplySent": false,
+      "publicReplyText": "Check your messages @@creativeedits.mov! Follow to unlock your link 📩",
+      "dmSent": false,
+      "dmText": "Hey @@creativeedits.mov! 👋 This exclusive link is for followers of @the.editor_harsh.\n\n1️⃣ Follow @the.editor_harsh\n2️⃣ Tap the button below once you've followed to unlock your link! 👇",
+      "timestamp": "2026-10-16T07:48:48.533Z",
+      "delayMs": 1500,
+      "errorMessage": "(#230) Requires pages_messaging permission to manage the object"
+    },
+    {
+      "id": "log_live_test_2",
+      "automationId": "auto_1792108185067",
+      "automationName": "1 video ",
+      "commenterUsername": "creativeedits.mov",
+      "commenterId": "18500307550097123",
+      "commentText": "LINK",
+      "mediaId": "18088533106767504",
+      "matchedKeyword": "LINK",
+      "status": "success",
+      "publicReplySent": true,
+      "publicReplyText": "Sent to your DMs @creativeedits.mov! Check your inbox 🚀",
+      "dmSent": true,
+      "dmText": "Hey creativeedits.mov! Thanks for your comment. Here is the link you requested:\n\n🔗 https://instagram.com/",
+      "timestamp": "2026-10-16T07:15:52.000Z",
+      "delayMs": 1500
+    },
+    {
+      "id": "log_live_test_1",
+      "automationId": "auto_1792108185067",
+      "automationName": "1 video ",
+      "commenterUsername": "mai_unknown_hu_7",
+      "commenterId": "18001963226800965",
+      "commentText": "LINK",
+      "mediaId": "18088533106767504",
+      "matchedKeyword": "LINK",
+      "status": "success",
+      "publicReplySent": true,
+      "publicReplyText": "Sent to your DMs @mai_unknown_hu_7! Check your inbox 🚀",
+      "dmSent": true,
+      "dmText": "Hey mai_unknown_hu_7! Thanks for your comment. Here is the link you requested: https://instagram.com/",
+      "timestamp": "2026-10-16T00:50:03.000Z",
+      "delayMs": 1500
+    }
+  ],
+  "pendingUnlocks": [
+    {
+      "id": "unlock_1792137797480",
+      "senderId": "2235072307257506",
+      "commenterUsername": "snipixstudio_",
+      "ruleId": "auto_1792108185067",
+      "linkUrl": "https://www.instagram.com/",
+      "linkButtonText": "Open Link 🔗",
+      "unlockedMessage": "🎉 Awesome, thanks for following @{{username}}! Here is your exclusive link:",
+      "timestamp": "2026-10-16T08:03:17.480Z"
+    },
+    {
+      "id": "unlock_1792149187850",
+      "senderId": "29719526060983208",
+      "commenterUsername": "tropexedits",
+      "ruleId": "auto_1792108185067",
+      "linkUrl": "https://www.instagram.com/",
+      "linkButtonText": "Open Link 🔗",
+      "unlockedMessage": "🎉 Awesome, thanks for following @{{username}}! Here is your exclusive link:",
+      "timestamp": "2026-10-16T11:13:07.850Z"
+    }
+  ]
+}
