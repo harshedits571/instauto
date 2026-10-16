@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
+import { X, ArrowRight, ShieldCheck, RefreshCw, ExternalLink, AlertTriangle } from 'lucide-react';
 import { User } from '@/types';
-import { signInWithGoogle } from '@/lib/firebase';
+import { auth, signInWithGoogleRedirect } from '@/lib/firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { saveStoredUser } from '@/lib/storage';
 
 interface AuthModalProps {
@@ -20,47 +21,59 @@ export default function AuthModal({
   onLoginSuccess
 }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isPopupBlocked, setIsPopupBlocked] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setErrorMsg('');
+    setIsPopupBlocked(false);
     setIsLoading(true);
 
-    // Call signInWithPopup directly — this is synchronous from the click handler
-    // so the browser won't block the popup
-    signInWithGoogle()
-      .then((res) => {
-        setIsLoading(false);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-        // User cancelled (closed popup) — not an error, just do nothing
-        if (!res.error && !res.user) return;
+      if (user) {
+        const mappedUser: User = {
+          id: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'Creator',
+          email: user.email || '',
+          role: 'creator',
+          plan: 'pro',
+          avatar: user.photoURL || undefined
+        };
 
-        if (res.error) {
-          setErrorMsg(res.error);
-          return;
-        }
+        saveStoredUser(mappedUser);
+        onLoginSuccess(mappedUser);
+        onClose();
+      }
+    } catch (error: any) {
+      console.error('[Firebase] Google Sign-in Error:', error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        return;
+      }
+      if (error.code === 'auth/popup-blocked') {
+        setIsPopupBlocked(true);
+        setErrorMsg('Pop-up was blocked by your browser.');
+      } else {
+        setErrorMsg(error.message || 'Failed to sign in with Google');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        if (res.user) {
-          const mappedUser: User = {
-            id: res.user.uid,
-            name: res.user.displayName || res.user.email?.split('@')[0] || 'Creator',
-            email: res.user.email || '',
-            role: 'creator',
-            plan: 'pro',
-            avatar: res.user.photoURL || undefined
-          };
-
-          saveStoredUser(mappedUser);
-          onLoginSuccess(mappedUser);
-          onClose();
-        }
-      })
-      .catch(() => {
-        setIsLoading(false);
-        setErrorMsg('Something went wrong. Please try again.');
-      });
+  const handleRedirectSignIn = () => {
+    setIsRedirecting(true);
+    signInWithGoogleRedirect().catch((err) => {
+      setIsRedirecting(false);
+      setErrorMsg(err.message || 'Redirect failed');
+    });
   };
 
   return (
@@ -77,7 +90,55 @@ export default function AuthModal({
         </div>
 
         <div className="modal-body" style={{ gap: '20px' }}>
-          {errorMsg && (
+          {isPopupBlocked && (
+            <div style={{ 
+              padding: '14px 16px', 
+              background: '#fffbeb', 
+              border: '1px solid #fde68a', 
+              borderRadius: '10px', 
+              color: '#92400e', 
+              fontSize: '13px', 
+              lineHeight: 1.5 
+            }}>
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <AlertTriangle size={16} />
+                <span>Pop-up Blocked by Browser</span>
+              </div>
+              <p style={{ margin: '0 0 12px 0', fontSize: '12px' }}>
+                Your browser blocked the pop-up window. Look at your address bar (top right) and click the pop-up icon to allow it, or tap below to sign in directly in this tab:
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleRedirectSignIn}
+                disabled={isRedirecting}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  borderRadius: '8px',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: isRedirecting ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isRedirecting ? (
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <ExternalLink size={16} />
+                )}
+                <span>{isRedirecting ? 'Redirecting to Google...' : 'Sign In in Current Tab (No Pop-up)'}</span>
+              </button>
+            </div>
+          )}
+
+          {!isPopupBlocked && errorMsg && (
             <div style={{ 
               padding: '14px 16px', 
               background: '#fef2f2', 

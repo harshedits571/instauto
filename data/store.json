@@ -14,63 +14,7 @@
     "status": "active"
   },
   "accessToken": "EABBYpWO71g0BSvEWwe0DPR9Ulu81ZCpjJXN0aASHlVc6jFBvHikO6EoIKQ37KXwM4ycvqHADpuUM524ZBUrIH6sqkYUAbTw5TkneurqWgjPU5dqggKv3f43UeiW7Xihu6UEZBwg4ZCENbAsMrT4JnIfRypPbqMYWRtCYBf4iuEiaU3cvaZA4jLY90z5WI6v0mEcNU35XTx3ZBuWxWqgJFwaIyltZBhmhbZBclGerSiWqCfwZD",
-  "automations": [
-    {
-      "dmMessage": "Hey @{{username}}! Thanks for your comment. Here is the link you requested:",
-      "keywords": [
-        "LINK",
-        "link",
-        "Link",
-        "SEND",
-        "send",
-        "INFO",
-        "info"
-      ],
-      "visitProfileButtonText": "Visit Profile",
-      "followButtonText": "Send me the access",
-      "notFollowingMessage": "Oops! Looks like you haven't followed me yet 👀\n\nIt would mean a lot if you could visit my profile and hit that follow button 😁.",
-      "reelId": "",
-      "accessButtonText": "Send me the access",
-      "safetySettings": {
-        "dmsSentToday": 0,
-        "dailyDmCap": 300,
-        "antiBanMode": true,
-        "sendOnlyOncePerUser": true,
-        "randomDelaySeconds": [
-          2,
-          6
-        ]
-      },
-      "reelUrl": "",
-      "stats": {
-        "deliveryRate": 100,
-        "linkClicks": 0,
-        "dmsDelivered": 2,
-        "commentsDetected": 3
-      },
-      "reelThumbnail": "",
-      "requireFollow": true,
-      "linkUrl": "https://www.instagram.com/",
-      "id": "auto_1792108185067",
-      "reelTitle": "All Reels & Videos (Account-Wide)",
-      "confirmFollowButtonText": "I'm following ✅",
-      "commentVariations": [
-        "Sent to your DMs @{{username}}! Check your inbox 🚀",
-        "Just sent you the link in your DMs @{{username}}! ⚡"
-      ],
-      "welcomeMessage": "Hey! I'm so glad you're here - thanks a ton for stopping by 😊\n\nTap below and I'll send you the access in just a moment ✨",
-      "targetType": "all_reels",
-      "userId": "default_creator",
-      "autoReplyComment": true,
-      "linkButtonText": "Get Access 🔗",
-      "name": "All Reels Link Automation",
-      "followPromptMessage": "Hey! I'm so glad you're here - thanks a ton for stopping by 😊\n\nTap below and I'll send you the access in just a moment ✨",
-      "unlockedMessage": "🎉 Awesome, thanks for following! Here is your exclusive link:",
-      "triggerType": "contains",
-      "status": "active",
-      "updatedAt": "2026-10-16T12:49:34.969Z"
-    }
-  ],
+  "automations": [],
   "logs": [
     {
       "id": "log_1792136928533_kpqhg",
