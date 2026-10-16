@@ -7,7 +7,7 @@ import { User } from '@/types';
 
 export default function AutoSync() {
   useEffect(() => {
-    // 1. Block external Chrome extensions (e.g. Urban VPN, adblockers) from popping up Next.js dev error overlays
+    // 1. Block external Chrome extensions (e.g. Bitdefender, Urban VPN) from popping up Next.js dev error overlays
     const handleExtensionError = (event: ErrorEvent) => {
       const isExtension = 
         event.filename?.startsWith('chrome-extension://') ||
@@ -21,6 +21,21 @@ export default function AutoSync() {
       }
     };
     window.addEventListener('error', handleExtensionError, true);
+
+    // Filter extension hydration noise (bis_skin_checked) from console.error
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      const msg = typeof args[0] === 'string' ? args[0] : '';
+      if (
+        msg.includes('bis_skin_checked') ||
+        msg.includes('chrome-extension://') ||
+        msg.includes('cldmemmdnllnccfahbcnjijheaolemfk') ||
+        msg.includes('eppiocemhmnlbhjplcgkofciiegomcon')
+      ) {
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
 
     // 2. Check if returning from Google Redirect Auth
     getRedirectAuthResult().then((firebaseUser) => {
