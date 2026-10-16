@@ -1,29 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/auth/login/instagram
- * Supports both Instagram Direct Login and Facebook OAuth
+ * Supports both Instagram Direct Login (instagram.com) and Facebook OAuth (facebook.com)
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const loginType = searchParams.get('type') || 'instagram'; // 'instagram' or 'facebook'
+  const userId = searchParams.get('userId') || 'default_creator';
 
-  const appId = process.env.NEXT_PUBLIC_META_APP_ID;
-  const host = request.headers.get('host') || 'localhost:3000';
-  const protocol = request.headers.get('x-forwarded-proto') || 'http';
-  const appUrl = `${protocol}://${host}`;
-  const redirectUri = `${appUrl}/api/auth/callback/instagram`;
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '4601066993473037';
+  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2331280857411125';
 
-  if (!appId) {
-    return NextResponse.json(
-      { error: 'NEXT_PUBLIC_META_APP_ID is not configured in .env.local' },
-      { status: 500 }
-    );
-  }
+  const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
+  const redirectUri = `${origin}/api/auth/callback/instagram`;
 
-  // 1. Direct Instagram Login (Uses Instagram API scopes)
+  const statePayload = `${userId}|${loginType}`;
+
+  // 1. Direct Instagram Login (instagram.com popup - no Facebook account required)
   if (loginType === 'instagram') {
-    const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || appId;
     const instagramScopes = [
       'instagram_business_basic',
       'instagram_business_manage_messages',
@@ -32,20 +29,27 @@ export async function GET(request: NextRequest) {
 
     const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${igAppId}&redirect_uri=${encodeURIComponent(
       redirectUri
-    )}&response_type=code&scope=${encodeURIComponent(instagramScopes)}`;
+    )}&response_type=code&scope=${encodeURIComponent(instagramScopes)}&state=${encodeURIComponent(statePayload)}`;
 
+    console.log(`[Instagram Direct Login] Redirecting user ${userId} to instagram.com authorization...`);
     return NextResponse.redirect(instagramOAuthUrl);
   }
 
-  // 2. Facebook Graph API Login (Uses Facebook scopes)
+  // 2. Facebook / Meta Business Login (1-click via linked Facebook Page)
   const facebookScopes = [
+    'pages_show_list',
+    'pages_read_engagement',
+    'instagram_basic',
     'instagram_manage_comments',
-    'instagram_manage_messages'
+    'instagram_manage_messages',
+    'business_management',
+    'public_profile'
   ].join(',');
 
-  const facebookOAuthUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(
+  const facebookOAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(
     redirectUri
-  )}&scope=${encodeURIComponent(facebookScopes)}&response_type=code`;
+  )}&scope=${encodeURIComponent(facebookScopes)}&response_type=code&state=${encodeURIComponent(statePayload)}`;
 
+  console.log(`[Meta Facebook Login] Redirecting user ${userId} to facebook.com authorization...`);
   return NextResponse.redirect(facebookOAuthUrl);
 }
