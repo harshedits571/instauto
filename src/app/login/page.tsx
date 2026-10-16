@@ -3,132 +3,247 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck, Lock, Instagram, ArrowRight, RefreshCw, ArrowLeft } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Instagram, 
+  ArrowRight, 
+  RefreshCw, 
+  ArrowLeft, 
+  Mail, 
+  KeyRound, 
+  User as UserIcon, 
+  CheckCircle2, 
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Send,
+  HelpCircle
+} from 'lucide-react';
 import { User } from '@/types';
-import { auth, getRedirectAuthResult, signInWithGoogleRedirect } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithCredential, signInWithPopup } from 'firebase/auth';
+import { auth, registerWithEmail, loginWithEmail, resendVerificationEmail, sendPasswordReset } from '@/lib/firebase';
 import { saveStoredUser } from '@/lib/storage';
+
+type AuthView = 'login' | 'signup' | 'verify' | 'forgot_password';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams?.get('redirect') || '/';
 
-  const [emailInput, setEmailInput] = useState('');
-  const [nameInput, setNameInput] = useState('');
+  // Mode state
+  const [view, setView] = useState<AuthView>('login');
+
+  // Form fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isPopupBlocked, setIsPopupBlocked] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Check for redirect auth result on mount
+  // Check for verified redirect param
   useEffect(() => {
-    getRedirectAuthResult().then((user) => {
-      if (user) {
-        const mappedUser: User = {
-          id: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'Creator',
-          email: user.email || '',
-          role: 'creator',
-          plan: 'pro',
-          avatar: user.photoURL || undefined
-        };
-        saveStoredUser(mappedUser);
-        window.location.href = redirectTo;
-      }
-    }).catch((err) => {
-      console.debug('[Redirect Auth Error]:', err);
-    });
-  }, [redirectTo]);
+    if (searchParams?.get('verified') === 'true') {
+      setSuccessMsg('Email verified successfully! You can now sign in with your password.');
+    }
+  }, [searchParams]);
 
-  // Direct, reliable Firebase Google Sign-in
-  const handleGoogleSignIn = async () => {
+  // Cooldown timer for resend email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Clear messages when switching views
+  const switchView = (newView: AuthView) => {
+    setView(newView);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  // Helper: Save user & redirect
+  const completeLogin = (firebaseUser: any, creatorName?: string) => {
+    const displayName = creatorName || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Creator';
+    const mappedUser: User = {
+      id: firebaseUser.uid,
+      name: displayName,
+      email: firebaseUser.email || '',
+      role: 'creator',
+      plan: 'pro',
+      avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName)}`
+    };
+
+    saveStoredUser(mappedUser);
+    window.location.href = redirectTo;
+  };
+
+  // 1. Handle Sign Up (Register + Send Verification Email)
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await registerWithEmail(cleanEmail, password, name.trim() || cleanEmail.split('@')[0]);
+    setIsLoading(false);
+
+    if (result.error) {
+      setErrorMsg(result.error);
+      return;
+    }
+
+    if (result.user) {
+      setUnverifiedEmail(cleanEmail);
+      setView('verify');
+      setResendCooldown(60);
+      setSuccessMsg('Account created! A verification link has been sent to your email.');
+    }
+  };
+
+  // 2. Handle Sign In
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setErrorMsg('Please enter your email.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await loginWithEmail(cleanEmail, password);
+    setIsLoading(false);
+
+    if (result.error) {
+      setErrorMsg(result.error);
+      return;
+    }
+
+    if (result.user) {
+      // Check if email is verified
+      if (!result.user.emailVerified) {
+        setUnverifiedEmail(cleanEmail);
+        setView('verify');
+        setErrorMsg('Your email is not verified yet. Please check your inbox or resend the verification link.');
+        return;
+      }
+
+      // Success: verified user logged in
+      completeLogin(result.user, result.user.displayName || name);
+    }
+  };
+
+  // 3. Check Verification Status (When user clicks "I have verified")
+  const checkVerificationStatus = async () => {
     setIsLoading(true);
     setErrorMsg('');
-    setIsPopupBlocked(false);
+    setSuccessMsg('');
+
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      if (user) {
-        const mappedUser: User = {
-          id: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'Creator',
-          email: user.email || '',
-          role: 'creator',
-          plan: 'pro',
-          avatar: user.photoURL || undefined
-        };
-        saveStoredUser(mappedUser);
-        window.location.href = redirectTo;
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          setSuccessMsg('Email verified successfully! Redirecting...');
+          setTimeout(() => {
+            completeLogin(auth.currentUser, name);
+          }, 800);
+          return;
+        }
       }
+      setErrorMsg('Your email is not verified yet. Please click the link sent to your email, then click this button again.');
     } catch (err: any) {
-      console.error('[Google Sign In Error]:', err);
-      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-        // User closed the popup, no error needed
-      } else if (err.code === 'auth/popup-blocked') {
-        setIsPopupBlocked(true);
-        setErrorMsg('Pop-up was blocked by your browser. You can click below to sign in directly without a pop-up.');
-      } else if (err.code === 'auth/unauthorized-domain') {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
-        setErrorMsg(`Domain unauthorized: "${host}" is not added to Firebase Console > Authentication > Settings > Authorized domains.`);
-      } else {
-        setErrorMsg(err.message || 'Pop-up could not complete. You can sign in using your email below.');
-      }
+      setErrorMsg('Could not check verification status. Please sign in again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRedirectSignIn = () => {
+  // 4. Resend Verification Link
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
     setIsLoading(true);
-    signInWithGoogleRedirect().catch((err) => {
-      setIsLoading(false);
-      setErrorMsg(err.message || 'Redirect failed');
-    });
+    setErrorMsg('');
+
+    const res = await resendVerificationEmail(auth.currentUser);
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else {
+      setSuccessMsg(`A new verification link has been sent to ${unverifiedEmail || email}!`);
+      setResendCooldown(60);
+    }
   };
 
-  // Direct fast Email/Creator login (100% reliable)
-  const handleDirectEmailLogin = (e: React.FormEvent) => {
+  // 5. Handle Forgot Password
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = emailInput.trim().toLowerCase();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setErrorMsg('Please enter a valid email address.');
+      setErrorMsg('Please enter your account email address.');
       return;
     }
 
     setIsLoading(true);
-    const creatorName = nameInput.trim() || cleanEmail.split('@')[0];
-    
-    const mappedUser: User = {
-      id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      name: creatorName,
-      email: cleanEmail,
-      role: 'creator',
-      plan: 'pro',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(creatorName)}`
-    };
+    const res = await sendPasswordReset(cleanEmail);
+    setIsLoading(false);
 
-    saveStoredUser(mappedUser);
-    setTimeout(() => {
-      window.location.href = redirectTo;
-    }, 100);
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else {
+      setSuccessMsg(`Password reset link sent to ${cleanEmail}. Please check your inbox and spam folder.`);
+    }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f8fafc',
-      color: '#0f172a',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '40px 20px',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    }}>
+    <div 
+      suppressHydrationWarning
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        color: '#0f172a',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '40px 20px',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      }}
+    >
       {/* Back to Home Link */}
-      <div style={{ width: '100%', maxWidth: '420px', marginBottom: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '440px', marginBottom: '20px' }}>
         <Link 
           href="/" 
           style={{
@@ -150,26 +265,27 @@ function LoginContent() {
       <div 
         suppressHydrationWarning
         style={{
-        width: '100%',
-        maxWidth: '420px',
-        backgroundColor: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '16px',
-        padding: '36px 32px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)'
-      }}>
+          width: '100%',
+          maxWidth: '440px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '36px 32px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)'
+        }}
+      >
         {/* Brand Logo & Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
-            width: '44px',
-            height: '44px',
+            width: '46px',
+            height: '46px',
             borderRadius: '12px',
             background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#ffffff',
-            marginBottom: '14px',
+            marginBottom: '12px',
             boxShadow: '0 4px 12px rgba(225, 48, 108, 0.25)'
           }}>
             <Instagram size={24} />
@@ -182,19 +298,95 @@ function LoginContent() {
             margin: '0 0 6px 0',
             letterSpacing: '-0.02em'
           }}>
-            Sign in to InstaAuto
+            {view === 'login' && 'Sign in to InstaAuto'}
+            {view === 'signup' && 'Create your Account'}
+            {view === 'verify' && 'Verify Your Email'}
+            {view === 'forgot_password' && 'Reset Password'}
           </h1>
           <p style={{
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#64748b',
             margin: 0,
             lineHeight: 1.5
           }}>
-            Automate Instagram comments and DMs safely
+            {view === 'login' && 'Automate Instagram comments and DMs safely'}
+            {view === 'signup' && 'Join thousands of creators automating replies'}
+            {view === 'verify' && 'Check your inbox to complete verification'}
+            {view === 'forgot_password' && "We'll send you a link to reset your password"}
           </p>
         </div>
 
-        {/* Error message */}
+        {/* Tab Switcher (Only visible for Login / Sign Up views) */}
+        {(view === 'login' || view === 'signup') && (
+          <div style={{
+            display: 'flex',
+            backgroundColor: '#f1f5f9',
+            padding: '4px',
+            borderRadius: '10px',
+            marginBottom: '22px'
+          }}>
+            <button
+              type="button"
+              onClick={() => switchView('login')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: view === 'login' ? '#ffffff' : 'transparent',
+                color: view === 'login' ? '#0f172a' : '#64748b',
+                boxShadow: view === 'login' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => switchView('signup')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: view === 'signup' ? '#ffffff' : 'transparent',
+                color: view === 'signup' ? '#0f172a' : '#64748b',
+                boxShadow: view === 'signup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
+
+        {/* Success Alert Banner */}
+        {successMsg && (
+          <div style={{
+            padding: '12px 14px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '10px',
+            color: '#15803d',
+            fontSize: '13px',
+            lineHeight: 1.4,
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Error Alert Banner */}
         {errorMsg && (
           <div style={{
             padding: '12px 14px',
@@ -204,180 +396,542 @@ function LoginContent() {
             color: '#b91c1c',
             fontSize: '13px',
             lineHeight: 1.4,
-            marginBottom: '20px'
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px'
           }}>
-            {errorMsg}
+            <AlertCircle size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Google Sign-in Button */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '10px',
-          marginBottom: '20px'
-        }}>
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              fontSize: '14px',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              backgroundColor: '#ffffff',
-              color: '#1f2937',
-              border: '1.5px solid #cbd5e1',
-              borderRadius: '8px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.15s ease',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            {isLoading ? (
-              <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-            )}
-            <span>{isLoading ? 'Signing in with Google...' : 'Continue with Google'}</span>
-          </button>
+        {/* ----------------- VIEW 1: SIGN IN ----------------- */}
+        {view === 'login' && (
+          <form onSubmit={handleSignIn} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Email address
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="creator@example.com"
+                  required
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
 
-          {isPopupBlocked && (
+            <div suppressHydrationWarning>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => switchView('forgot_password')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: '12px',
+                    color: '#4f46e5',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <KeyRound size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 38px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '12px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: '#94a3b8',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
             <button
-              type="button"
-              onClick={handleRedirectSignIn}
+              type="submit"
               disabled={isLoading}
               style={{
                 width: '100%',
-                padding: '10px 14px',
-                fontSize: '13px',
+                padding: '12px 16px',
+                backgroundColor: '#4f46e5',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '14px',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer'
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                marginTop: '4px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                transition: 'background-color 0.15s ease'
               }}
             >
-              Sign In in current tab (No pop-up required)
+              {isLoading ? (
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <>
+                  <span>Sign In to Dashboard</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
             </button>
-          )}
-        </div>
 
-        {/* Clean Divider */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          margin: '20px 0',
-          color: '#94a3b8',
-          fontSize: '12px',
-          fontWeight: 500
-        }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
-          <span>or continue with email</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
-        </div>
+            <div style={{ textAlign: 'center', marginTop: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#64748b' }}>Don't have an account? </span>
+              <button
+                type="button"
+                onClick={() => switchView('signup')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                Sign Up
+              </button>
+            </div>
+          </form>
+        )}
 
-        {/* Email Entry Form */}
-        <form onSubmit={handleDirectEmailLogin} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div suppressHydrationWarning>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Email address
-            </label>
-            <input
-              type="email"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              placeholder="you@example.com"
-              required
-              suppressHydrationWarning
+        {/* ----------------- VIEW 2: SIGN UP ----------------- */}
+        {view === 'signup' && (
+          <form onSubmit={handleSignUp} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Your Name / Brand
+              </label>
+              <div style={{ position: 'relative' }}>
+                <UserIcon size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Harsh Edits"
+                  required
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Email address
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="creator@example.com"
+                  required
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Password (min 6 characters)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <KeyRound size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a strong password"
+                  required
+                  minLength={6}
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 38px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '12px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: '#94a3b8',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Confirm Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <KeyRound size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                  minLength={6}
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
               style={{
                 width: '100%',
-                padding: '10px 14px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
+                padding: '12px 16px',
+                backgroundColor: '#4f46e5',
+                border: 'none',
                 borderRadius: '8px',
-                color: '#0f172a',
+                color: '#ffffff',
                 fontSize: '14px',
-                boxSizing: 'border-box'
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                marginTop: '4px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
               }}
-            />
-          </div>
+            >
+              {isLoading ? (
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <>
+                  <span>Create Account & Send Verification</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
 
-          <div suppressHydrationWarning>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-              Your Name (Optional)
-            </label>
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Harsh Edits"
-              suppressHydrationWarning
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                color: '#0f172a',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+            <div style={{ textAlign: 'center', marginTop: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#64748b' }}>Already have an account? </span>
+              <button
+                type="button"
+                onClick={() => switchView('login')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: '#4f46e5',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#ffffff',
-              fontSize: '14px',
-              fontWeight: 600,
-              display: 'flex',
+        {/* ----------------- VIEW 3: VERIFY EMAIL PENDING ----------------- */}
+        {view === 'verify' && (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: '#eef2ff',
+              color: '#4f46e5',
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              marginTop: '4px',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            {isLoading ? (
-              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <>
-                <span>Continue to Dashboard</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </form>
+              marginBottom: '16px'
+            }}>
+              <Send size={28} />
+            </div>
+
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>
+              Verify Your Email Address
+            </h3>
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+              We sent an official verification link to:<br />
+              <strong style={{ color: '#0f172a' }}>{unverifiedEmail || email}</strong>
+            </p>
+
+            <div style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              fontSize: '12px',
+              color: '#64748b',
+              textAlign: 'left',
+              lineHeight: 1.5,
+              marginBottom: '20px'
+            }}>
+              <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: '#334155' }}>
+                Quick instructions:
+              </p>
+              <ol style={{ margin: 0, paddingLeft: '18px' }}>
+                <li>Open your email inbox (and check the Spam/Promotions folder if needed).</li>
+                <li>Click the verification link from Firebase/InstaAuto.</li>
+                <li>Return here and tap <strong>"I Have Verified My Email"</strong> below.</li>
+              </ol>
+            </div>
+
+            <button
+              type="button"
+              onClick={checkVerificationStatus}
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: '#4f46e5',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                marginBottom: '10px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+              }}
+            >
+              {isLoading ? (
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <>
+                  <CheckCircle2 size={16} />
+                  <span>I Have Verified My Email</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={isLoading || resendCooldown > 0}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                color: resendCooldown > 0 ? '#94a3b8' : '#334155',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: (isLoading || resendCooldown > 0) ? 'not-allowed' : 'pointer',
+                marginBottom: '16px'
+              }}
+            >
+              {resendCooldown > 0 ? `Resend link in ${resendCooldown}s` : 'Resend Verification Link'}
+            </button>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => switchView('login')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                ← Back to Sign In
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ----------------- VIEW 4: FORGOT PASSWORD ----------------- */}
+        {view === 'forgot_password' && (
+          <form onSubmit={handleForgotPassword} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div suppressHydrationWarning>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Account Email address
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94a3b8' }} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="creator@example.com"
+                  required
+                  suppressHydrationWarning
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 38px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#0f172a',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: '#4f46e5',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                marginTop: '4px'
+              }}
+            >
+              {isLoading ? (
+                <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Send Password Reset Link</span>
+                </>
+              )}
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => switchView('login')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                ← Back to Sign In
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Trust & Compliance info */}
         <div style={{
-          marginTop: '24px',
+          marginTop: '26px',
           paddingTop: '18px',
           borderTop: '1px solid #f1f5f9',
           display: 'flex',

@@ -9,7 +9,12 @@ import {
   onAuthStateChanged as onFirebaseAuthStateChanged,
   User as FirebaseUser,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -41,8 +46,184 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const getActionCodeSettings = () => {
+  const origin = typeof window !== 'undefined' && window.location.origin 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app');
+  return {
+    url: `${origin}/login?verified=true`,
+    handleCodeInApp: false
+  };
+};
+
 /**
- * Standard Google Sign-In via popup.
+ * Register a new user with Email and Password, set their name, and send an email verification link.
+ */
+export async function registerWithEmail(
+  email: string, 
+  pass: string, 
+  displayName: string
+): Promise<{ user: FirebaseUser | null; error: string | null }> {
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+    if (displayName.trim() && cred.user) {
+      await updateProfile(cred.user, { displayName: displayName.trim() });
+    }
+
+    // Dispatch branded custom email via Resend
+    let customEmailSent = false;
+    try {
+      const res = await fetch('/api/auth/send-custom-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          type: 'verification',
+          displayName: displayName.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        customEmailSent = true;
+      } else {
+        console.warn('[Custom Email API warning]:', data.error);
+      }
+    } catch (e: any) {
+      console.warn('[Custom Email API Network]:', e.message);
+    }
+
+    // Seamless fallback to standard Firebase mail if custom API was not reached
+    if (!customEmailSent && cred.user) {
+      try {
+        await sendEmailVerification(cred.user, getActionCodeSettings());
+      } catch (emailErr: any) {
+        console.warn('[Firebase] Verification email send warning:', emailErr.message);
+      }
+    }
+
+    return { user: cred.user, error: null };
+  } catch (error: any) {
+    console.error('[Firebase] Registration Error:', error);
+    return { user: null, error: formatAuthError(error) };
+  }
+}
+
+/**
+ * Sign in with Email and Password.
+ */
+export async function loginWithEmail(
+  email: string, 
+  pass: string
+): Promise<{ user: FirebaseUser | null; error: string | null }> {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
+    return { user: cred.user, error: null };
+  } catch (error: any) {
+    console.error('[Firebase] Login Error:', error);
+    return { user: null, error: formatAuthError(error) };
+  }
+}
+
+/**
+ * Resend verification email link to the user.
+ */
+export async function resendVerificationEmail(user?: FirebaseUser | null): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const targetUser = user || auth.currentUser;
+    if (!targetUser?.email) {
+      return { success: false, error: 'No active user session found to verify.' };
+    }
+
+    // Try custom Resend email first
+    try {
+      const res = await fetch('/api/auth/send-custom-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetUser.email,
+          type: 'verification',
+          displayName: targetUser.displayName
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, error: null };
+      }
+    } catch (e) {}
+
+    // Fallback
+    await sendEmailVerification(targetUser, getActionCodeSettings());
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('[Firebase] Resend verification error:', error);
+    return { success: false, error: formatAuthError(error) };
+  }
+}
+
+/**
+ * Send password reset email link.
+ */
+export async function sendPasswordReset(email: string): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Try custom Resend email first
+    try {
+      const res = await fetch('/api/auth/send-custom-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          type: 'password_reset'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true, error: null };
+      }
+    } catch (e) {}
+
+    // Fallback
+    await sendPasswordResetEmail(auth, cleanEmail);
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error('[Firebase] Password Reset Error:', error);
+    return { success: false, error: formatAuthError(error) };
+  }
+}
+
+/**
+ * Convert Firebase error codes to user-friendly messages.
+ */
+export function formatAuthError(error: any): string {
+  const code = error?.code || '';
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in instead.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters.';
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-credential':
+      return 'Incorrect email or password. Please try again or reset your password.';
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please wait a moment or reset your password.';
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Please contact support.';
+    case 'auth/operation-not-allowed':
+      return 'Email/Password sign-in is not enabled in Firebase Console. Go to Firebase Console > Authentication > Sign-in method > Enable Email/Password.';
+    case 'auth/network-request-failed':
+      return 'Network connection error. Please check your internet connection.';
+    default:
+      return error?.message || 'An unexpected authentication error occurred. Please try again.';
+  }
+}
+
+/**
+ * Standard Google Sign-In via popup (preserved if needed).
  */
 export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: string | null; isPopupBlocked?: boolean }> {
   return signInWithPopup(auth, googleProvider)
@@ -50,13 +231,9 @@ export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: 
       return { user: result.user, error: null };
     })
     .catch((error: any) => {
-      console.error('[Firebase] Google Sign-in Error:', error.code, error.message);
-
-      // User closed the popup or cancelled
       if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
         return { user: null, error: null };
       }
-
       if (error.code === 'auth/popup-blocked') {
         return { 
           user: null, 
@@ -64,27 +241,19 @@ export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: 
           isPopupBlocked: true
         };
       }
-
-      return { user: null, error: error.message || 'Failed to sign in with Google' };
+      return { user: null, error: formatAuthError(error) };
     });
 }
 
-/**
- * Full-page redirect fallback (works on all mobile browsers and when popups are strictly blocked).
- */
 export function signInWithGoogleRedirect(): Promise<void> {
   return signInWithRedirect(auth, googleProvider);
 }
 
-/**
- * Check for redirect result on page load
- */
 export async function getRedirectAuthResult(): Promise<FirebaseUser | null> {
   try {
     const result = await getRedirectResult(auth);
     return result?.user || null;
   } catch (err: any) {
-    console.debug('[Firebase] getRedirectResult:', err.message);
     return null;
   }
 }
@@ -94,7 +263,6 @@ export async function logOut() {
     await signOut(auth);
     return { success: true };
   } catch (error: any) {
-    console.error('[Firebase] Sign-out Error:', error);
     return { success: false, error: error.message };
   }
 }
