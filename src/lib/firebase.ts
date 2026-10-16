@@ -120,7 +120,7 @@ export async function loginWithEmail(
     const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
     return { user: cred.user, error: null };
   } catch (error: any) {
-    console.error('[Firebase] Login Error:', error);
+    console.debug('[Firebase] Login Note:', error.code || error.message);
     return { user: null, error: formatAuthError(error) };
   }
 }
@@ -156,7 +156,7 @@ export async function resendVerificationEmail(user?: FirebaseUser | null): Promi
     await sendEmailVerification(targetUser, getActionCodeSettings());
     return { success: true, error: null };
   } catch (error: any) {
-    console.error('[Firebase] Resend verification error:', error);
+    console.debug('[Firebase] Resend verification note:', error.code || error.message);
     return { success: false, error: formatAuthError(error) };
   }
 }
@@ -188,7 +188,7 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
     await sendPasswordResetEmail(auth, cleanEmail);
     return { success: true, error: null };
   } catch (error: any) {
-    console.error('[Firebase] Password Reset Error:', error);
+    console.debug('[Firebase] Password Reset note:', error.code || error.message);
     return { success: false, error: formatAuthError(error) };
   }
 }
