@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { ShieldCheck, Plus, User as UserIcon, LogOut } from 'lucide-react';
 import { User, InstagramAccount } from '@/types';
 import { logOut } from '@/lib/firebase';
@@ -86,9 +87,9 @@ export default function Header({
             </button>
           </div>
         ) : (
-          <button 
+          <Link 
+            href="/login"
             className="btn btn-primary btn-sm" 
-            onClick={onOpenAuthModal}
             style={{ 
               background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', 
               boxShadow: '0 2px 10px rgba(79, 70, 229, 0.3)',
@@ -96,20 +97,23 @@ export default function Header({
               alignItems: 'center', 
               gap: '6px',
               padding: '8px 16px',
-              fontWeight: 700
+              fontWeight: 700,
+              textDecoration: 'none',
+              color: '#ffffff',
+              borderRadius: '8px'
             }}
           >
             <UserIcon size={14} />
             <span>Sign In / Register</span>
-          </button>
+          </Link>
         )}
 
         {/* Create Automation Button */}
         <button 
           className="btn btn-primary"
           onClick={() => {
-            if (!isLoggedIn && onOpenAuthModal) {
-              onOpenAuthModal();
+            if (!isLoggedIn) {
+              window.location.href = '/login?redirect=/';
             } else {
               onOpenCreateModal();
             }

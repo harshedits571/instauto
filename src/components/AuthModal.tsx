@@ -188,6 +188,21 @@ export default function AuthModal({
             <span>{isLoading ? 'Signing in...' : 'Continue with Google'}</span>
           </button>
 
+          <a
+            href="/login"
+            style={{
+              textAlign: 'center',
+              fontSize: '13px',
+              color: '#4f46e5',
+              fontWeight: 600,
+              textDecoration: 'none',
+              padding: '4px',
+              display: 'block'
+            }}
+          >
+            Open Dedicated Login Page →
+          </a>
+
           {/* Benefits / Trust signals */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#4b5563' }}>
