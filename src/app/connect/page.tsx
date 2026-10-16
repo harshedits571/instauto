@@ -20,6 +20,7 @@ import Header from '@/components/Header';
 import AutomationModal from '@/components/AutomationModal';
 import AuthModal from '@/components/AuthModal';
 import { 
+  DEFAULT_USER,
   DEFAULT_INSTAGRAM_ACCOUNT, 
   getStoredUser, 
   getStoredAccount, 
@@ -32,7 +33,7 @@ import { subscribeToAuthChanges } from '@/lib/firebase';
 import { InstagramAccount, User } from '@/types';
 
 export default function ConnectInstagramPage() {
-  const [user, setUser] = useState<User>(getStoredUser());
+  const [user, setUser] = useState<User>(DEFAULT_USER);
   const [account, setAccount] = useState<InstagramAccount>(DEFAULT_INSTAGRAM_ACCOUNT);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');

@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { ShieldCheck, Plus, User as UserIcon, LogOut } from 'lucide-react';
 import { User, InstagramAccount } from '@/types';
 import { logOut } from '@/lib/firebase';
@@ -16,7 +19,13 @@ export default function Header({
   onOpenCreateModal, 
   onOpenAuthModal 
 }: HeaderProps) {
-  const isLoggedIn = !!user.id && user.id !== 'usr_default';
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isLoggedIn = mounted && !!user.id && user.id !== 'usr_default';
 
   const handleSignOut = async () => {
     if (confirm('Are you sure you want to log out?')) {

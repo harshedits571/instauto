@@ -7,7 +7,9 @@ import {
   getRedirectResult,
   signOut, 
   onAuthStateChanged as onFirebaseAuthStateChanged,
-  User as FirebaseUser
+  User as FirebaseUser,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -32,21 +34,30 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-export async function signInWithGoogle() {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return { user: result.user, error: null };
-  } catch (error: any) {
-    console.error('[Firebase Client] Google Sign-in Error:', error);
-    if (error?.code === 'auth/popup-blocked') {
-      return { 
-        user: null, 
-        error: 'Pop-up was blocked by your browser. Please allow pop-ups for this site in your address bar, or use Direct Redirect.',
-        isPopupBlocked: true 
-      };
-    }
-    return { user: null, error: error.message || 'Failed to sign in with Google' };
-  }
+// Enforce LocalStorage persistence so auth session survives tab close and navigation
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.debug('[Firebase] Persistence setup:', err.message);
+  });
+}
+
+export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: string | null; isPopupBlocked?: boolean }> {
+  // Synchronous invocation directly in the click event loop prevents browser popup blocker
+  return signInWithPopup(auth, googleProvider)
+    .then((result) => {
+      return { user: result.user, error: null };
+    })
+    .catch((error: any) => {
+      console.error('[Firebase Client] Google Sign-in Error:', error);
+      if (error?.code === 'auth/popup-blocked') {
+        return { 
+          user: null, 
+          error: 'Your browser blocked the pop-up window. Look at your address bar (top right) and click "Always allow pop-ups for this site".',
+          isPopupBlocked: true 
+        };
+      }
+      return { user: null, error: error.message || 'Failed to sign in with Google' };
+    });
 }
 
 export async function signInWithGoogleRedirect() {

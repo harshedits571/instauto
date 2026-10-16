@@ -28,40 +28,35 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+  const handleGoogleSignIn = () => {
     setErrorMsg('');
-    try {
-      const res = await signInWithGoogle();
-      if (res.error || !res.user) {
-        setErrorMsg(res.error || 'Failed to sign in with Google');
-        setIsLoading(false);
-        return;
-      }
-
-      const mappedUser: User = {
-        id: res.user.uid,
-        name: res.user.displayName || res.user.email?.split('@')[0] || 'Creator',
-        email: res.user.email || '',
-        role: 'creator',
-        plan: 'pro',
-        avatar: res.user.photoURL || undefined
-      };
-
-      saveStoredUser(mappedUser);
-      onLoginSuccess(mappedUser);
-      onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Google sign-in error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRedirectSignIn = async () => {
     setIsLoading(true);
-    const { signInWithGoogleRedirect } = await import('@/lib/firebase');
-    await signInWithGoogleRedirect();
+
+    signInWithGoogle()
+      .then((res) => {
+        setIsLoading(false);
+        if (res.error || !res.user) {
+          setErrorMsg(res.error || 'Failed to sign in with Google');
+          return;
+        }
+
+        const mappedUser: User = {
+          id: res.user.uid,
+          name: res.user.displayName || res.user.email?.split('@')[0] || 'Creator',
+          email: res.user.email || '',
+          role: 'creator',
+          plan: 'pro',
+          avatar: res.user.photoURL || undefined
+        };
+
+        saveStoredUser(mappedUser);
+        onLoginSuccess(mappedUser);
+        onClose();
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        setErrorMsg(err.message || 'Google sign-in error');
+      });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,21 +90,19 @@ export default function AuthModal({
 
         <div className="modal-body" style={{ gap: '16px' }}>
           {errorMsg && (
-            <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '12px' }}>
-              <div>{errorMsg}</div>
+            <div style={{ padding: '14px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', color: '#991b1b', fontSize: '13px', lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 600, marginBottom: '6px' }}>{errorMsg}</div>
               {(errorMsg.toLowerCase().includes('pop-up') || errorMsg.includes('popup-blocked')) && (
-                <div style={{ marginTop: '10px' }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#7f1d1d' }}>
-                    Your browser blocked the sign-in pop-up window. You can click below to sign in directly without pop-ups:
-                  </p>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={handleRedirectSignIn}
-                    style={{ width: '100%', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
-                  >
-                    <span>Sign In with Google (Direct Redirect)</span>
-                  </button>
+                <div style={{ marginTop: '8px', padding: '10px', background: '#ffffff', borderRadius: '8px', border: '1px solid #fca5a5', fontSize: '12px' }}>
+                  <strong>How to enable pop-ups in your browser:</strong>
+                  <ol style={{ paddingLeft: '18px', margin: '4px 0 6px 0', lineHeight: 1.5 }}>
+                    <li>Look at your browser URL / address bar (right side).</li>
+                    <li>Click the icon with the red cross / pop-up icon.</li>
+                    <li>Select <strong>&quot;Always allow pop-ups for this site&quot;</strong> and click Done.</li>
+                  </ol>
+                  <div style={{ borderTop: '1px solid #fee2e2', paddingTop: '8px', color: '#4b5563' }}>
+                    💡 <em>You can also sign in right now with Email &amp; Password below (zero pop-ups needed).</em>
+                  </div>
                 </div>
               )}
             </div>
