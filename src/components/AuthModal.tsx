@@ -33,10 +33,6 @@ export default function AuthModal({
     setErrorMsg('');
     try {
       const res = await signInWithGoogle();
-      if ((res as any)?.isRedirecting) {
-        // Browser popup was blocked, user is being redirected to Google
-        return;
-      }
       if (res.error || !res.user) {
         setErrorMsg(res.error || 'Failed to sign in with Google');
         setIsLoading(false);
@@ -101,7 +97,7 @@ export default function AuthModal({
           {errorMsg && (
             <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '12px' }}>
               <div>{errorMsg}</div>
-              {errorMsg.includes('popup-blocked') && (
+              {(errorMsg.toLowerCase().includes('pop-up') || errorMsg.includes('popup-blocked')) && (
                 <div style={{ marginTop: '10px' }}>
                   <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#7f1d1d' }}>
                     Your browser blocked the sign-in pop-up window. You can click below to sign in directly without pop-ups:
