@@ -320,10 +320,9 @@ export default function ConnectInstagramPage() {
                 </p>
 
                 {isLoggedIn ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '440px', margin: '0 auto' }}>
-                    {/* Method 1: Direct Instagram Login */}
+                  <div style={{ maxWidth: '420px', margin: '0 auto', textAlign: 'center' }}>
                     <a
-                      href={`/api/auth/login/instagram?type=instagram&userId=${encodeURIComponent(user.id)}`}
+                      href={`/api/auth/instagram?userId=${encodeURIComponent(user.id)}`}
                       className="btn btn-primary"
                       style={{ 
                         width: '100%', 
@@ -332,9 +331,9 @@ export default function ConnectInstagramPage() {
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center', 
-                        gap: '10px', 
-                        padding: '14px 24px', 
-                        fontSize: '15px', 
+                        gap: '12px', 
+                        padding: '16px 28px', 
+                        fontSize: '16px', 
                         fontWeight: 700, 
                         borderRadius: '12px', 
                         textDecoration: 'none',
@@ -342,48 +341,13 @@ export default function ConnectInstagramPage() {
                         transition: 'transform 0.15s ease'
                       }}
                     >
-                      <Instagram size={20} />
-                      <span>Log in with Instagram Directly</span>
+                      <Instagram size={22} />
+                      <span>Connect Instagram Account</span>
                     </a>
-                    <span style={{ fontSize: '12px', color: '#64748b', marginTop: '-6px' }}>
-                      ✨ Direct login on instagram.com &bull; No Facebook page required
-                    </span>
-
-                    {/* Divider */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
-                      <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }} />
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>or</span>
-                      <div style={{ height: '1px', background: '#e2e8f0', flex: 1 }} />
-                    </div>
-
-                    {/* Method 2: Facebook / Meta 1-Click */}
-                    <a
-                      href={`/api/auth/login/instagram?type=facebook&userId=${encodeURIComponent(user.id)}`}
-                      className="btn btn-secondary"
-                      style={{ 
-                        width: '100%', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '10px', 
-                        padding: '12px 24px', 
-                        fontSize: '14px', 
-                        fontWeight: 600, 
-                        borderRadius: '12px', 
-                        textDecoration: 'none',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        color: '#1e293b'
-                      }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                      <span>Continue via Facebook Page (1-Click)</span>
-                    </a>
-                    <span style={{ fontSize: '12px', color: '#64748b', marginTop: '-6px' }}>
-                      ⚡ Instant 1-click if your Instagram is linked to a Facebook Page
-                    </span>
+                    
+                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '12px', lineHeight: 1.5 }}>
+                      ⚡ <strong>1-Click Meta Authorization</strong> &bull; Meta securely links your Instagram Creator/Business profile via official Facebook Login for Business.
+                    </p>
                   </div>
                 ) : (
                   <button
