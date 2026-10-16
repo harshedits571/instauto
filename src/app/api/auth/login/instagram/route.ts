@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
   const appId = process.env.NEXT_PUBLIC_META_APP_ID || '4601066993473037';
   const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2331280857411125';
 
-  const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
+  let origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
+  // Instagram's OAuth server strictly enforces HTTPS (rejects http://localhost)
+  if (origin.startsWith('http://') && loginType === 'instagram') {
+    origin = 'https://instauto-nine.vercel.app';
+  }
   const redirectUri = `${origin}/api/auth/callback/instagram`;
 
   const statePayload = `${userId}|${loginType}`;
