@@ -2,9 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut, 
   onAuthStateChanged as onFirebaseAuthStateChanged,
   User as FirebaseUser,
@@ -13,9 +11,21 @@ import {
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// Determine the correct authDomain:
+// In production (Vercel), use our own domain so signInWithPopup works same-origin.
+// The /__/auth rewrite in next.config.mjs & vercel.json proxies Firebase auth endpoints.
+// Locally, use the default Firebase authDomain.
+function getAuthDomain(): string {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    // On production, use the current hostname as authDomain
+    return window.location.host;
+  }
+  return process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'instauto-93b71.firebaseapp.com';
+}
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCm7cq10d8cD773PY9LoERWolKt2CpEobU",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "instauto-93b71.firebaseapp.com",
+  authDomain: getAuthDomain(),
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "instauto-93b71",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "instauto-93b71.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "167054234575",
@@ -41,42 +51,33 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: string | null; isPopupBlocked?: boolean }> {
-  // Synchronous invocation directly in the click event loop prevents browser popup blocker
+/**
+ * Simple, standard Google Sign-In via popup.
+ * This is a synchronous call from the click handler — no async wrapping, no redirect fallback.
+ * The popup will NOT be blocked because it's called directly in the user gesture event.
+ */
+export function signInWithGoogle(): Promise<{ user: FirebaseUser | null; error: string | null }> {
   return signInWithPopup(auth, googleProvider)
     .then((result) => {
       return { user: result.user, error: null };
     })
     .catch((error: any) => {
-      console.error('[Firebase Client] Google Sign-in Error:', error);
-      if (error?.code === 'auth/popup-blocked') {
+      console.error('[Firebase] Google Sign-in Error:', error.code, error.message);
+
+      // User closed the popup or cancelled
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        return { user: null, error: null }; // Not an error, user just cancelled
+      }
+
+      if (error.code === 'auth/popup-blocked') {
         return { 
           user: null, 
-          error: 'Your browser blocked the pop-up window. Look at your address bar (top right) and click "Always allow pop-ups for this site".',
-          isPopupBlocked: true 
+          error: 'Pop-up was blocked. Please allow pop-ups for this site in your browser settings.'
         };
       }
+
       return { user: null, error: error.message || 'Failed to sign in with Google' };
     });
-}
-
-export async function signInWithGoogleRedirect() {
-  try {
-    await signInWithRedirect(auth, googleProvider);
-    return { isRedirecting: true, error: null };
-  } catch (error: any) {
-    return { isRedirecting: false, error: error.message };
-  }
-}
-
-export async function getRedirectAuthResult() {
-  try {
-    const result = await getRedirectResult(auth);
-    return result?.user || null;
-  } catch (err: any) {
-    console.warn('[Firebase Client] getRedirectResult:', err);
-    return null;
-  }
 }
 
 export async function logOut() {
@@ -84,7 +85,7 @@ export async function logOut() {
     await signOut(auth);
     return { success: true };
   } catch (error: any) {
-    console.error('[Firebase Client] Sign-out Error:', error);
+    console.error('[Firebase] Sign-out Error:', error);
     return { success: false, error: error.message };
   }
 }
