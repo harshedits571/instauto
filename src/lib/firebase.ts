@@ -104,7 +104,7 @@ export async function registerWithEmail(
 
     return { user: cred.user, error: null };
   } catch (error: any) {
-    console.error('[Firebase] Registration Error:', error);
+    console.debug('[Firebase] Registration Note:', error.code || error.message);
     return { user: null, error: formatAuthError(error) };
   }
 }
