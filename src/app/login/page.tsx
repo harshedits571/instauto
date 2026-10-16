@@ -50,16 +50,19 @@ function LoginContent() {
           avatar: payload.picture || undefined
         };
 
-        // Silently authenticate with Firebase credential in background
+        // 1. Save user to storage immediately
+        saveStoredUser(mappedUser);
+
+        // 2. Non-blocking Firebase authentication in background
         try {
           const credential = GoogleAuthProvider.credential(idToken);
-          await signInWithCredential(auth, credential);
-        } catch (firebaseErr: any) {
-          console.debug('[Firebase Credential Sync]:', firebaseErr?.message);
-        }
+          signInWithCredential(auth, credential).catch((e) => {
+            console.debug('[Firebase Sync]:', e.message);
+          });
+        } catch (e) {}
 
-        saveStoredUser(mappedUser);
-        router.push(redirectTo);
+        // 3. Hard redirect to dashboard so state initializes cleanly
+        window.location.href = redirectTo;
       } catch (err: any) {
         console.error('Google token decode error:', err);
         setErrorMsg('Failed to process Google sign-in. Please try again.');
@@ -133,7 +136,7 @@ function LoginContent() {
           avatar: user.photoURL || undefined
         };
         saveStoredUser(mappedUser);
-        router.push(redirectTo);
+        window.location.href = redirectTo;
       }
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
@@ -167,8 +170,8 @@ function LoginContent() {
 
     saveStoredUser(mappedUser);
     setTimeout(() => {
-      router.push(redirectTo);
-    }, 300);
+      window.location.href = redirectTo;
+    }, 100);
   };
 
   return (
