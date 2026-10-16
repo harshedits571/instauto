@@ -109,7 +109,7 @@ export default function SimulatorPage() {
       'Check your messages @{{username}}, link is on the way! 📩'
     ],
     dmMessage: 'Hey @{{username}}! Thanks for checking out the reel. Here is the link you requested:',
-    linkUrl: 'https://instagram.com/the.editor_harsh',
+    linkUrl: 'https://instagram.com',
     linkButtonText: 'Open Free Link 🔗',
     requireFollow: true,
     welcomeMessage: "Hey! I'm so glad you're here - thanks a ton for stopping by 😊\n\nTap below and I'll send you the access in just a moment ✨",

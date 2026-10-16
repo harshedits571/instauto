@@ -39,6 +39,7 @@ import {
   saveStoredLogs,
   INITIAL_SAFETY_METRICS
 } from '@/lib/storage';
+import { subscribeToAuthChanges } from '@/lib/firebase';
 import { AutomationRule, CommentLog, InstagramAccount, User } from '@/types';
 
 export default function DashboardPage() {
@@ -59,8 +60,8 @@ export default function DashboardPage() {
     setAutomations(getStoredAutomations());
     setLogs(getStoredLogs());
 
-    if (u && u.id && u.id !== 'usr_default') {
-      fetch(`/api/user/account?userId=${encodeURIComponent(u.id)}`)
+    const loadUserData = (userId: string) => {
+      fetch(`/api/user/account?userId=${encodeURIComponent(userId)}`)
         .then(r => r.json())
         .then(d => {
           if (d.connected && d.account) {
@@ -70,7 +71,7 @@ export default function DashboardPage() {
         })
         .catch(() => {});
 
-      fetch(`/api/automations?userId=${encodeURIComponent(u.id)}`)
+      fetch(`/api/automations?userId=${encodeURIComponent(userId)}`)
         .then(r => r.json())
         .then(d => {
           if (d.success && Array.isArray(d.data)) {
@@ -79,7 +80,31 @@ export default function DashboardPage() {
           }
         })
         .catch(() => {});
+    };
+
+    if (u && u.id && u.id !== 'usr_default') {
+      loadUserData(u.id);
     }
+
+    const unsubscribe = subscribeToAuthChanges((firebaseUser) => {
+      if (firebaseUser) {
+        const mappedUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Creator',
+          email: firebaseUser.email || '',
+          role: 'creator',
+          plan: 'pro',
+          avatar: firebaseUser.photoURL || undefined
+        };
+        setUser(mappedUser);
+        saveStoredUser(mappedUser);
+        loadUserData(firebaseUser.uid);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   const handleToggleAutomation = (id: string) => {
@@ -115,6 +140,27 @@ export default function DashboardPage() {
   const handleLoginSuccess = (newUser: User) => {
     setUser(newUser);
     saveStoredUser(newUser);
+
+    // Fetch account & rules for the newly logged in user
+    fetch(`/api/user/account?userId=${encodeURIComponent(newUser.id)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.connected && d.account) {
+          setAccount(d.account);
+          saveStoredAccount(d.account);
+        }
+      })
+      .catch(() => {});
+
+    fetch(`/api/automations?userId=${encodeURIComponent(newUser.id)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.data)) {
+          setAutomations(d.data);
+          saveStoredAutomations(d.data);
+        }
+      })
+      .catch(() => {});
   };
 
   // Aggregated Stats
