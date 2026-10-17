@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // -------------------------------------------------------------
     if (loginType === 'instagram') {
       const formData = new URLSearchParams();
-      formData.append('client_id', igAppId);
+      formData.append('client_id', appId);
       formData.append('client_secret', appSecret);
       formData.append('grant_type', 'authorization_code');
       formData.append('redirect_uri', redirectUri);

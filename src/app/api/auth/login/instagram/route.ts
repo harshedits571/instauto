@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       'instagram_business_manage_comments'
     ].join(',');
 
-    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${igAppId}&redirect_uri=${encodeURIComponent(
+    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${appId}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=${encodeURIComponent(instagramScopes)}&state=${encodeURIComponent(statePayload)}`;
 
