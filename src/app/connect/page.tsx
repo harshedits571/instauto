@@ -343,11 +343,11 @@ export default function ConnectInstagramPage() {
                       }}
                     >
                       <Instagram size={22} />
-                      <span>Connect Instagram Account</span>
+                      <span>Log in with Instagram</span>
                     </a>
                     
                     <p style={{ fontSize: '13px', color: '#64748b', marginTop: '12px', lineHeight: 1.5 }}>
-                      ⚡ <strong>Official Meta Authorization:</strong> Meta (Instagram&apos;s parent company) safely connects your Instagram Creator/Business profile. In the popup, select your Instagram profile and Facebook Page.
+                      ⚡ <strong>Direct Instagram Login:</strong> Log in directly with your Instagram username &amp; password. Zero Facebook account or page required.
                     </p>
                   </div>
                 ) : (

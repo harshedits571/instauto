@@ -22,8 +22,9 @@ export async function GET(request: NextRequest) {
   }
 
   const appId = process.env.NEXT_PUBLIC_META_APP_ID || '2313756702789862';
-  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2313756702789862';
+  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '4368936740028300';
   const appSecret = process.env.META_APP_SECRET || '13be75eea4151ceb33baca16aa8bd4e3';
+  const igAppSecret = process.env.INSTAGRAM_APP_SECRET || '35d69972b34da4bd3bd6e957206eac30';
 
   try {
     console.log(`[Meta OAuth Callback] Processing ${loginType} login for user ${userId}...`);
@@ -32,29 +33,33 @@ export async function GET(request: NextRequest) {
     // FLOW 1: DIRECT INSTAGRAM LOGIN (NO FACEBOOK PAGE REQUIRED)
     // -------------------------------------------------------------
     if (loginType === 'instagram') {
+      const cleanCode = code.split('#')[0];
       const formData = new URLSearchParams();
-      formData.append('client_id', appId);
-      formData.append('client_secret', appSecret);
+      formData.append('client_id', igAppId);
+      formData.append('client_secret', igAppSecret);
       formData.append('grant_type', 'authorization_code');
       formData.append('redirect_uri', redirectUri);
-      formData.append('code', code);
+      formData.append('code', cleanCode);
 
       const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
       });
       const tokenData = await tokenRes.json();
 
       if (tokenData.error_message || tokenData.error) {
         console.error('[Instagram Direct OAuth] Token exchange error:', tokenData);
-        // Fallback to Facebook exchange if the code was actually from Facebook
+        return NextResponse.redirect(`${origin}/connect?error=${encodeURIComponent(tokenData.error_message || tokenData.error?.message || 'Instagram token exchange failed')}`);
       } else if (tokenData.access_token) {
         let userAccessToken = tokenData.access_token;
 
         // Exchange for long-lived Instagram token (60 days)
         try {
           const longLivedRes = await fetch(
-            `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(appSecret)}&access_token=${encodeURIComponent(userAccessToken)}`
+            `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(igAppSecret)}&access_token=${encodeURIComponent(userAccessToken)}`
           );
           const longLivedData = await longLivedRes.json();
           if (longLivedData.access_token) {

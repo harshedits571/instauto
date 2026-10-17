@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get('userId') || 'default_creator';
 
   const appId = process.env.NEXT_PUBLIC_META_APP_ID || '2313756702789862';
-  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2313756702789862';
+  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '4368936740028300';
 
   let origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
   // Instagram's OAuth server strictly enforces HTTPS (rejects http://localhost)
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       'instagram_business_manage_comments'
     ].join(',');
 
-    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${appId}&redirect_uri=${encodeURIComponent(
+    const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${igAppId}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=${encodeURIComponent(instagramScopes)}&state=${encodeURIComponent(statePayload)}`;
 

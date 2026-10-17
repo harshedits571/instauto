@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId') || 'default_creator';
 
-  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '2313756702789862';
+  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '4368936740028300';
   
   // Base App URL: auto-detects from request host or env
   let origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
@@ -14,20 +14,20 @@ export async function GET(request: NextRequest) {
     origin = 'https://instauto-nine.vercel.app';
   }
   const redirectUri = `${origin}/api/auth/callback/instagram`;
-  // Meta Login for Business (App ID 2313756702789862)
+
+  // Official Instagram Business Login scopes (auto dm-IG)
   const scopes = [
-    'pages_show_list',
-    'pages_read_engagement',
-    'instagram_basic',
-    'instagram_manage_comments',
-    'instagram_manage_messages',
-    'public_profile'
+    'instagram_business_basic',
+    'instagram_business_manage_messages',
+    'instagram_business_manage_comments'
   ].join(',');
 
-  const statePayload = `${userId}|facebook`;
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(statePayload)}`;
+  const statePayload = `${userId}|instagram`;
 
-  console.log(`[Meta OAuth] Redirecting user ${userId} to Meta authorization for Instagram profile:`, authUrl);
+  // 100% Direct Instagram Login (instagram.com login dialog - Zero Facebook branding)
+  const authUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${encodeURIComponent(igAppId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(statePayload)}`;
+
+  console.log(`[Instagram Direct OAuth] Redirecting user ${userId} to Instagram authorization:`, authUrl);
 
   return NextResponse.redirect(authUrl);
 }
