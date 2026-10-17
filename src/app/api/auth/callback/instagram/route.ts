@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/connect?error=${encodeURIComponent(errorDescription || 'Access denied by user')}`);
   }
 
-  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '4601066993473037';
-  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2331280857411125';
-  const appSecret = process.env.META_APP_SECRET || '';
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '2313756702789862';
+  const igAppId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID || '2313756702789862';
+  const appSecret = process.env.META_APP_SECRET || '13be75eea4151ceb33baca16aa8bd4e3';
 
   try {
     console.log(`[Meta OAuth Callback] Processing ${loginType} login for user ${userId}...`);

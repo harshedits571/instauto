@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId') || 'default_creator';
 
-  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '4601066993473037';
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID || '2313756702789862';
   
   // Base App URL: auto-detects from request host or env
   let origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     origin = 'https://instauto-nine.vercel.app';
   }
   const redirectUri = `${origin}/api/auth/callback/instagram`;
-  // Meta Facebook Login for Business (Official & verified for App ID 4601066993473037)
+  // Meta Login for Business (App ID 2313756702789862)
   const scopes = [
     'pages_show_list',
     'pages_read_engagement',
