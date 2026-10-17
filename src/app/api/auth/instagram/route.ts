@@ -14,19 +14,21 @@ export async function GET(request: NextRequest) {
     origin = 'https://instauto-nine.vercel.app';
   }
   const redirectUri = `${origin}/api/auth/callback/instagram`;
-  const statePayload = `${userId}|instagram`;
-
-  const instagramScopes = [
-    'instagram_business_basic',
-    'instagram_business_manage_messages',
-    'instagram_business_manage_comments'
+  // Meta Facebook Login for Business (Official & verified for App ID 4601066993473037)
+  const scopes = [
+    'pages_show_list',
+    'pages_read_engagement',
+    'instagram_basic',
+    'instagram_manage_comments',
+    'instagram_manage_messages',
+    'business_management',
+    'public_profile'
   ].join(',');
 
-  const instagramOAuthUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${appId}&redirect_uri=${encodeURIComponent(
-    redirectUri
-  )}&response_type=code&scope=${encodeURIComponent(instagramScopes)}&state=${encodeURIComponent(statePayload)}`;
+  const statePayload = `${userId}|facebook`;
+  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(statePayload)}`;
 
-  console.log(`[Instagram Direct OAuth] Redirecting user ${userId} to Instagram authorization:`, instagramOAuthUrl);
+  console.log(`[Meta OAuth] Redirecting user ${userId} to Meta authorization for Instagram profile:`, authUrl);
 
-  return NextResponse.redirect(instagramOAuthUrl);
+  return NextResponse.redirect(authUrl);
 }

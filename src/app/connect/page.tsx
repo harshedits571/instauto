@@ -321,9 +321,9 @@ export default function ConnectInstagramPage() {
 
                 {isLoggedIn ? (
                   <div style={{ maxWidth: '440px', margin: '0 auto', textAlign: 'center' }}>
-                    {/* Option 1: Direct Instagram Login */}
+                    {/* Primary Option: Official Meta Login */}
                     <a
-                      href={`/api/auth/login/instagram?type=instagram&userId=${encodeURIComponent(user.id)}`}
+                      href={`/api/auth/instagram?userId=${encodeURIComponent(user.id)}`}
                       className="btn btn-primary"
                       style={{ 
                         width: '100%', 
@@ -343,44 +343,11 @@ export default function ConnectInstagramPage() {
                       }}
                     >
                       <Instagram size={22} />
-                      <span>Log in with Instagram</span>
+                      <span>Connect Instagram Account</span>
                     </a>
                     
-                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '10px', lineHeight: 1.5 }}>
-                      ✨ <strong>Direct Instagram Login:</strong> Log in directly with your Instagram username &amp; password. Zero Facebook account needed.
-                    </p>
-
-                    {/* Subtle divider */}
-                    <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px', gap: '12px' }}>
-                      <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>OR</span>
-                      <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                    </div>
-
-                    {/* Option 2: Facebook Business Login */}
-                    <a
-                      href={`/api/auth/login/instagram?type=facebook&userId=${encodeURIComponent(user.id)}`}
-                      className="btn btn-secondary"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        padding: '12px 20px',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        borderRadius: '10px',
-                        textDecoration: 'none',
-                        borderColor: '#cbd5e1',
-                        color: '#334155',
-                        background: '#f8fafc'
-                      }}
-                    >
-                      <span>Connect via Facebook Page</span>
-                    </a>
-                    <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
-                      Best if your Instagram Creator account is already linked to a Meta Facebook Page.
+                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '12px', lineHeight: 1.5 }}>
+                      ⚡ <strong>Official Meta Authorization:</strong> Meta (Instagram&apos;s parent company) safely connects your Instagram Creator/Business profile. In the popup, select your Instagram profile and Facebook Page.
                     </p>
                   </div>
                 ) : (
