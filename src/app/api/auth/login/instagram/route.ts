@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
     'instagram_basic',
     'instagram_manage_comments',
     'instagram_manage_messages',
-    'business_management',
     'public_profile'
   ].join(',');
 
