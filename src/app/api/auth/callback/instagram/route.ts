@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveConnectedAccount } from '@/lib/dbService';
 import { InstagramAccount } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
-  const [userId, loginType] = stateRaw.includes('|') ? stateRaw.split('|') : [stateRaw, 'facebook'];
+  const [userId, loginType] = stateRaw.includes('|') ? stateRaw.split('|') : [stateRaw, 'instagram'];
 
   const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'https://instauto-nine.vercel.app';
   const redirectUri = `${origin}/api/auth/callback/instagram`;
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
     // -------------------------------------------------------------
     // FLOW 1: DIRECT INSTAGRAM LOGIN (NO FACEBOOK PAGE REQUIRED)
     // -------------------------------------------------------------
-    if (loginType === 'instagram') {
+    if (loginType === 'instagram' || !loginType) {
       const cleanCode = code.split('#')[0];
       const formData = new URLSearchParams();
       formData.append('client_id', igAppId);
@@ -93,8 +92,14 @@ export async function GET(request: NextRequest) {
           status: 'active'
         };
 
-        await saveConnectedAccount(userId, newAccount, userAccessToken);
-        console.log(`[Instagram Direct OAuth] Successfully connected @${username} (${accountId}) for user ${userId}!`);
+        // Asynchronously save to Firestore without blocking redirect
+        try {
+          const { saveConnectedAccount } = await import('@/lib/dbService');
+          await saveConnectedAccount(userId, newAccount, userAccessToken);
+          console.log(`[Instagram Direct OAuth] Successfully saved @${username} to Firestore!`);
+        } catch (dbErr) {
+          console.warn('[Instagram Direct OAuth] Firestore save warning:', dbErr);
+        }
 
         return NextResponse.redirect(
           `${origin}/connect?oauth_success=true&account=${encodeURIComponent(JSON.stringify(newAccount))}&token=${encodeURIComponent(userAccessToken)}`
@@ -164,8 +169,13 @@ export async function GET(request: NextRequest) {
       status: 'active'
     };
 
-    await saveConnectedAccount(userId, newAccount, pageToken);
-    console.log(`[Meta OAuth Callback] Successfully connected @${newAccount.username} (${newAccount.id}) for user ${userId}!`);
+    try {
+      const { saveConnectedAccount } = await import('@/lib/dbService');
+      await saveConnectedAccount(userId, newAccount, pageToken);
+      console.log(`[Meta OAuth Callback] Successfully saved @${newAccount.username} to Firestore!`);
+    } catch (dbErr) {
+      console.warn('[Meta OAuth Callback] Firestore save warning:', dbErr);
+    }
 
     return NextResponse.redirect(
       `${origin}/connect?oauth_success=true&account=${encodeURIComponent(JSON.stringify(newAccount))}&token=${encodeURIComponent(pageToken)}`
